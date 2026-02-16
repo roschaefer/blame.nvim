@@ -4,7 +4,7 @@
 
 ## Features
 
-*   **Commit History Navigation:** Navigate line-by-line through revisions of a file, viewing previous versions.
+* **Commit History Navigation:** Navigate line-by-line through revisions of a file.
 
 ## Installation
 
@@ -25,17 +25,19 @@ return {
 
 ## Usage
 
-1.  Open a file in a Git repository.
-2.  Run the command `:Blame`.
-3.  A popup window will appear, showing the blame information for the current file.
+1. Open a file in a Git repository.
+2. Run the command `:Blame`.
+3. A popup window will appear, showing the blame information for the current file.
 
 Navigate through the commit history:
-*   Press `<CR>` (Carriage Return) on a blame line to view the file content at that commit.
-*   Press `<BS>` (Backspace) to go back to the previous commit in the history.
+
+* Press `<CR>` on a blame line to view the file content at that commit.
+* Press `<BS>` to go back to the previous commit in the history.
 
 ## Configuration
 
 You can override the default configuration:
+
 ```lua
 -- plugins/blame.lua
 return {
@@ -56,6 +58,7 @@ return {
 ## Development
 
 To run the tests, use the following command:
+
 ```bash
 ./scripts/test
 ```
