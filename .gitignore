@@ -1,0 +1,29 @@
+# Ignore Neovim plugin build files and common editor/OS junk
+*.swp
+*.swo
+*.DS_Store
+*.orig
+*.bak
+
+# Lua specific
+*.lua.c
+*.lua.o
+*.so
+
+# Build output
+build/
+dist/
+
+# Dependencies (if any are managed locally, though usually handled by package manager)
+deps/
+
+# Editor-specific
+.idea/
+.vscode/
+
+# OS generated files
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+.tests/
