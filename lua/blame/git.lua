@@ -38,9 +38,9 @@ end
 function M.get_blame_output(git_root, current_file, commit_hash_to_blame)
 	local blame_cmd
 	if commit_hash_to_blame then
-		blame_cmd = { "git", "blame", "--root", commit_hash_to_blame, "--", current_file }
+		blame_cmd = { "git", "blame", "--line-porcelain", commit_hash_to_blame, "--", current_file }
 	else
-		blame_cmd = { "git", "blame", "--root", current_file }
+		blame_cmd = { "git", "blame", "--line-porcelain", current_file }
 	end
 
 	local blame_result = vim.system(blame_cmd, { text = true, cwd = git_root }):wait()

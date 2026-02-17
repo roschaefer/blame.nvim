@@ -61,24 +61,26 @@ function Buffers:update_blame(commit_hash)
 	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.blame_buf })
 	vim.api.nvim_buf_set_lines(self.blame_buf, 0, -1, false, {})
 
-	local previous_info = ""
+	local previous_commit = ""
 	for i, line in ipairs(self.blame_lines) do
-		if line.info ~= previous_info then
+		local blame_info_str = string.format("%s %s (%s)", line.commit, line.author, line.date)
+		if line.commit ~= previous_commit then
 			local hex_color = "#" .. line.commit:sub(1, 6)
 			local highlight_group = "GitBlameCommit_" .. line.commit
 			vim.cmd("highlight " .. highlight_group .. " guifg=" .. hex_color)
 
-			local author_and_date = line.info:sub(#line.commit + 2)
+			local commit_text = NuiText(line.commit:sub(1, 8), highlight_group)
+			local author_and_date_text = NuiText(" " .. line.author .. " (" .. line.date .. ")")
 
 			local nui_line = NuiLine({
-				NuiText(line.commit, highlight_group),
-				NuiText(" " .. author_and_date),
+				commit_text,
+				author_and_date_text,
 			})
 
 			nui_line:render(self.blame_buf, self.ns_id, i)
-			previous_info = line.info
+			previous_commit = line.commit
 		else
-			local nui_line = NuiLine({ NuiText(string.rep(" ", #previous_info)) })
+			local nui_line = NuiLine({ NuiText(string.rep(" ", #blame_info_str)) })
 			nui_line:render(self.blame_buf, self.ns_id, i)
 		end
 	end
