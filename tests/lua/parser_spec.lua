@@ -118,4 +118,3 @@ author-time 1709283600
 		assert.are.same(expected_blame_lines, actual_blame_lines)
 	end)
 end)
-
