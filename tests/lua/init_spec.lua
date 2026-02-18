@@ -28,4 +28,30 @@ describe("blame.init", function()
 		assert.are.equal("L", blame.options.keys.navigate_forward)
 		assert.are.equal("H", blame.options.keys.navigate_backward)
 	end)
+
+	it("shows a warning if the current file is not in a git repository", function()
+		local tmpdir = vim.fn.tempname()
+		vim.fn.mkdir(tmpdir, "p")
+		local buf_id = vim.api.nvim_create_buf(false, true)
+		vim.api.nvim_buf_set_name(buf_id, tmpdir .. "/anyfile")
+
+		local old_win = vim.api.nvim_get_current_win()
+		local new_win = vim.api.nvim_open_win(buf_id, true, {
+			relative = "editor",
+			width = 1,
+			height = 1,
+			row = 0,
+			col = 0,
+		})
+
+		blame.show_blame_info()
+
+		local history = vim.fn.execute("messages")
+		assert.is_true(string.match(history, "Not in a git repository") ~= nil)
+
+		vim.api.nvim_set_current_win(old_win)
+		vim.api.nvim_win_close(new_win, true)
+		vim.api.nvim_buf_delete(buf_id, { force = true })
+		vim.fn.delete(tmpdir, "rf")
+	end)
 end)
