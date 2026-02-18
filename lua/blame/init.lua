@@ -7,6 +7,7 @@ local Layout = require("nui.layout")
 
 local utils = require("blame.utils")
 local Popups = require("blame.popups")
+local Git = require("blame.git")
 
 -- TODO: Fix potential redundancy: The default `opts` from `lazy.lua` are passed to `M.setup` by lazy.vim.
 M.defaults = {
@@ -61,7 +62,16 @@ function M.show_blame_info()
 		},
 	})
 
-	local popups = Popups:new(current_file_buf, blame_popup_instance, file_popup_instance)
+	local git_instance = Git:new(current_file_buf)
+	if not git_instance then
+		return
+	end
+
+	local popups = Popups:new({
+		git_instance = git_instance,
+		blame_popup_instance = blame_popup_instance,
+		file_popup_instance = file_popup_instance,
+	}, current_file_buf)
 	if not popups then
 		return
 	end
