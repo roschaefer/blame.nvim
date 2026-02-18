@@ -1,0 +1,11 @@
+#!/usr/bin/env bash
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+cd $SCRIPT_DIR/..
+
+# `luarocks install lua-language-server` fails compilation on my machine
+# TODO: remove this workaround
+PATH="$PATH:$HOME/.local/share/nvim/mason/bin/"
+
+VIMRUNTIME="$(nvim --clean --headless --cmd 'lua io.write(os.getenv("VIMRUNTIME"))' --cmd 'quit')"
+
+llscheck .
