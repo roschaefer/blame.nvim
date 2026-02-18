@@ -69,3 +69,4 @@ To run the tests, use the following command:
 * **Retain Cursor Position**: Preserve the cursor's position when navigating through blame history.
 * **Commit Summary View**: Introduce a third panel to show a concise summary of the current commit message.
 * **Merge Commit Navigation**: Provide an option for users to select which parent to follow when encountering a merge commit.
+* **Closing Window on Escape Sequence**: Improve usability by closing windows in an intuitive way.
