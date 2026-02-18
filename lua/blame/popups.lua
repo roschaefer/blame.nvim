@@ -63,7 +63,6 @@ function Popups:update_blame(commit_hash)
 	self.blame_lines = parser.parse_blame_output(blame_result_stdout)
 
 	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.blame_popup_instance.bufnr })
-	vim.api.nvim_buf_set_lines(self.blame_popup_instance.bufnr, 0, -1, false, {})
 
 	local previous_commit = ""
 	for i, line in ipairs(self.blame_lines) do
@@ -89,6 +88,7 @@ function Popups:update_blame(commit_hash)
 		end
 	end
 
+	vim.api.nvim_buf_set_lines(self.blame_popup_instance.bufnr, #self.blame_lines + 1, -1, false, {})
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.blame_popup_instance.bufnr })
 end
 
