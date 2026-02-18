@@ -2,4 +2,4 @@
 SCRIPT_DIR=$(dirname "$(realpath "$0")")
 cd $SCRIPT_DIR/..
 
-nvim -l tests/minit.lua --minitest "$@"
+nvim -l tests/minit-test.lua --minitest "$@"

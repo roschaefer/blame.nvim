@@ -17,10 +17,11 @@ local function find_git_root(file_path)
 	}, { text = true }):wait()
 
 	if git_root_result.code ~= 0 then
-		vim.notify(
-			"blame.nvim: Not in a git repository. Stderr: " .. (git_root_result.stderr or ""),
-			vim.log.levels.WARN
-		)
+		if git_root_result.stderr:match("not a git repository") then
+			vim.notify("blame.nvim: Not in a git repository.", vim.log.levels.WARN)
+		else
+			vim.notify("blame.nvim: `git` Stderr: " .. (git_root_result.stderr or ""), vim.log.levels.ERROR)
+		end
 		return nil
 	end
 	local git_root = vim.trim(git_root_result.stdout)

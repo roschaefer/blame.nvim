@@ -1,6 +1,7 @@
 -- tests/lua/popups_spec.lua
 
 local assert = require("luassert")
+local stub = require("luassert.stub")
 local Popups = require("blame.popups")
 
 describe("blame.popups", function()
@@ -32,9 +33,7 @@ describe("blame.popups", function()
 	it("updates file buffer content", function()
 		local buf_id = vim.api.nvim_create_buf(false, true)
 		local mock_git = {
-			get_file_content = function()
-				return { "line 1", "line 2" }
-			end,
+			get_file_content = stub({}, "get_file_content", { "line 1", "line 2" }),
 		}
 
 		local blame_popup = { bufnr = vim.api.nvim_create_buf(false, true) }
@@ -49,6 +48,8 @@ describe("blame.popups", function()
 		---@cast popups -nil
 
 		popups:update_file_buffer_content("abc1234")
+
+		assert.stub(mock_git.get_file_content).was.called_with(mock_git, "abc1234")
 
 		local content = vim.api.nvim_buf_get_lines(file_popup.bufnr, 0, -1, false)
 		assert.are.same({ "line 1", "line 2" }, content)
