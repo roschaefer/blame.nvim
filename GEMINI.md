@@ -56,6 +56,8 @@ Then, run `:Lazy install` in Neovim to install the plugin.
 ## Testing
 
 Unit tests are written using `luassert` and are located in `tests/lua/`.
+**Test File Convention**: Every Lua file under `lua/` must have a corresponding test file in `tests/lua/`. The path in `tests/lua/` must mirror the path in `lua/`, and the filename must end in `_spec.lua`.
+**Assertion Style**: Assertion values should be hard-coded for readability and safety (avoiding variables that might change unexpectedly).
 **Test Description Style**: Test descriptions (for `describe` and `it` blocks) use simple present, affirmative explanations without the word "should". For example, "It synchronizes windows" instead of "It should synchronize windows".
 They can be run headless using Neovim:
 
@@ -75,6 +77,10 @@ Before submitting changes, ensure all Lua files pass diagnostics:
 ## Key Files
 
 *   `lua/blame/init.lua`: The main entry point of the plugin, responsible for setting up the blame view, handling user commands, and orchestrating interactions between different components.
-*   `lua/blame/breadcrumb.lua`: Implements the stack-based commit history navigation logic, managing commit hashes, preventing duplicates, and handling special revisions.
-*   `tests/lua/breadcrumb_spec.lua`: Contains unit tests for the `breadcrumb` module, ensuring its correct behavior.
-*   `.luarc.json`: Configuration file for Lua language server, defining workspace libraries for Neovim's Lua runtime.
+*   `lua/blame/git.lua`: Contains utility functions for interacting with Git (blame, show, find root).
+*   `lua/blame/popups.lua`: Manages the creation and updates of the UI popups (blame and file content).
+*   `lua/blame/parser.lua`: Responsible for parsing the `git blame --line-porcelain` output.
+*   `lua/blame/breadcrumb.lua`: Implements the stack-based commit history navigation logic.
+*   `lua/blame/utils.lua`: Provides helper functions for window and cursor synchronization.
+*   `tests/lua/`: Directory containing unit tests for all modules (e.g., `breadcrumb_spec.lua`, `git_spec.lua`).
+*   `.luarc.json`: Configuration file for Lua language server.
