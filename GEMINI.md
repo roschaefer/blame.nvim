@@ -49,6 +49,7 @@ Then, run `:Lazy install` in Neovim to install the plugin.
 *   **Diagnostics:** Lua Language Server diagnostics are checked using `scripts/llscheck` (based on [llscheck](https://github.com/jeffzi/llscheck)). All code must be free of diagnostic errors.
 *   **UI Library:** Utilizes `nui.nvim` for creating interactive popups and managing layouts.
 *   **Object-Oriented Style:** Components like the breadcrumb navigation employ an object-oriented approach in Lua, using metatables (`__index`) for method dispatch on instances.
+*   **Dependency Injection:** To make dependency injection in the constructor more obvious, if a class has dependencies (e.g. to-be-mocked modules), they should be passed as the first argument to the constructor (e.g. `new`) and named `dependencies`. It is always a table which can contain the to-be-mocked modules. If there are no such dependencies, do not add a `dependencies` parameter. If a module needs to be mocked in a test, it is a strong signal to refactor the code to use this dependency injection pattern.
 *   **Testing Framework:** Unit tests are written using `luassert` and are located in `tests/lua/`.
 *   **Development Environment:** The presence of `.luarc.json` suggests configuration for Lua language servers (e.g., sumneko/lua-language-server) to provide features like auto-completion, diagnostics, and workspace-wide library definitions for an improved development experience.
 *   **Git Integration:** Relies on standard Git commands (`git blame`, `git show`) for its core functionality.

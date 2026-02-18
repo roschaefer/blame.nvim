@@ -1,30 +1,21 @@
 local Popups = {}
 Popups.__index = Popups
 
-local git = require("blame.git")
 local parser = require("blame.parser")
 local NuiLine = require("nui.line")
 local NuiText = require("nui.text")
 local Breadcrumb = require("blame.breadcrumb")
 
-function Popups:new(current_file_buf, blame_popup_instance, file_popup_instance)
-	local current_file = vim.api.nvim_buf_get_name(current_file_buf)
-	if not current_file or current_file == "" then
-		vim.notify("blame.nvim: Not a file buffer.", vim.log.levels.WARN)
-		return
-	end
-	-- Find git root
-	local git_root = git.find_git_root(current_file)
-	if not git_root then
-		vim.notify("blame.nvim: Not a git repository.", vim.log.levels.WARN)
-		return
-	end
+function Popups:new(dependencies, current_file_buf)
+	local git_instance = dependencies.git_instance
+	local blame_popup_instance = dependencies.blame_popup_instance
+	local file_popup_instance = dependencies.file_popup_instance
+
 	local current_filetype = vim.api.nvim_get_option_value("filetype", { scope = "local", buf = current_file_buf })
 	local instance = {
 		current_file_buf = current_file_buf,
-		current_file = current_file,
+		git_instance = git_instance,
 		current_filetype = current_filetype,
-		git_root = git_root,
 		blame_popup_instance = blame_popup_instance,
 		file_popup_instance = file_popup_instance,
 		ns_id = vim.api.nvim_create_namespace("blame"),
@@ -36,7 +27,7 @@ function Popups:new(current_file_buf, blame_popup_instance, file_popup_instance)
 end
 
 function Popups:update_file_buffer_content(commit_hash)
-	local content = git.get_file_content(self.git_root, self.current_file, commit_hash)
+	local content = self.git_instance:get_file_content(commit_hash)
 
 	if not content then
 		return
@@ -53,7 +44,7 @@ function Popups:update_file_buffer_content(commit_hash)
 end
 
 function Popups:update_blame(commit_hash)
-	local blame_result_stdout = git.get_blame_output(self.git_root, self.current_file, commit_hash)
+	local blame_result_stdout = self.git_instance:get_blame_output(commit_hash)
 	self.blame_lines = {}
 
 	if not blame_result_stdout then
