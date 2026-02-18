@@ -6,7 +6,7 @@ local Popup = require("nui.popup")
 local Layout = require("nui.layout")
 
 local utils = require("blame.utils")
-local Buffers = require("blame.buffers")
+local Popups = require("blame.popups")
 
 -- TODO: Fix potential redundancy: The default `opts` from `lazy.lua` are passed to `M.setup` by lazy.vim.
 M.defaults = {
@@ -45,7 +45,12 @@ function M.show_blame_info()
 
 	-- Create file_popup for file content
 	local file_popup_instance = Popup({
-		border = { style = "rounded" },
+		border = {
+			style = "rounded",
+			text = {
+				top = "",
+			},
+		},
 		focusable = true,
 		win_options = {
 			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
@@ -56,10 +61,11 @@ function M.show_blame_info()
 		},
 	})
 
-	local buffers = Buffers:new(current_file_buf, blame_popup_instance.bufnr, file_popup_instance.bufnr)
-	if not buffers then
+	local popups = Popups:new(current_file_buf, blame_popup_instance, file_popup_instance)
+	if not popups then
 		return
 	end
+	popups:update_buffers(nil)
 
 	-- Define the layout: blame_popup on left, file_popup on right
 	local main_layout = Layout(
@@ -78,13 +84,12 @@ function M.show_blame_info()
 		vim.api.nvim_set_current_win(blame_popup_instance.winid)
 	end
 
-	buffers:update_buffers(nil)
 	utils.initialize_cursor_position(current_file_win, blame_popup_instance.winid)
 	utils.initialize_cursor_position(current_file_win, file_popup_instance.winid)
 
 	-- Keymap for breadcrumb navigation (forward)
 	blame_popup_instance:map("n", M.options.keys.navigate_forward, function()
-		buffers:navigate_forward()
+		popups:navigate_forward()
 	end, {
 		noremap = true,
 		silent = true,
@@ -92,7 +97,7 @@ function M.show_blame_info()
 
 	-- Keymap for breadcrumb navigation (backward)
 	blame_popup_instance:map("n", M.options.keys.navigate_backward, function()
-		buffers:navigate_backward()
+		popups:navigate_backward()
 	end, {
 		noremap = true,
 		silent = true,
