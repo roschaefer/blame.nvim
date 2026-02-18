@@ -45,6 +45,8 @@ Then, run `:Lazy install` in Neovim to install the plugin.
 *   **Language:** The plugin is entirely written in Lua.
 *   **Neovim API Usage:** Extensively utilizes `vim.api` for core Neovim interactions (e.g., buffer and window manipulation, keymap settings) and `vim.system` for asynchronous execution of Git commands.
 *   **Module Structure:** Code is organized into modules under the `lua/blame/` directory.
+*   **Formatting:** All Lua files are formatted using `stylua`.
+*   **Diagnostics:** Lua Language Server diagnostics are checked using `scripts/llscheck` (based on [llscheck](https://github.com/jeffzi/llscheck)). All code must be free of diagnostic errors.
 *   **UI Library:** Utilizes `nui.nvim` for creating interactive popups and managing layouts.
 *   **Object-Oriented Style:** Components like the breadcrumb navigation employ an object-oriented approach in Lua, using metatables (`__index`) for method dispatch on instances.
 *   **Testing Framework:** Unit tests are written using `luassert` and are located in `tests/lua/`.
@@ -59,6 +61,15 @@ They can be run headless using Neovim:
 
 ```bash
 ./scripts/test
+```
+
+### Diagnostics
+
+Before submitting changes, ensure all Lua files pass diagnostics:
+
+```bash
+./scripts/test
+./scripts/llscheck
 ```
 
 ## Key Files
