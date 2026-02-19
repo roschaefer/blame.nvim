@@ -75,4 +75,17 @@ describe("blame.blame_view", function()
 
 		vim.api.nvim_buf_delete(buf_id, { force = true })
 	end)
+
+	it("closes the view by unmounting the layout", function()
+		local buf_id = vim.api.nvim_create_buf(false, true)
+		local mock_git = {}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		local layout_unmount_spy = spy.on(blame_view.layout, "unmount")
+
+		blame_view:close()
+
+		assert.spy(layout_unmount_spy).was.called(1)
+
+		vim.api.nvim_buf_delete(buf_id, { force = true })
+	end)
 end)

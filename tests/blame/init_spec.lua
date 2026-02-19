@@ -30,6 +30,7 @@ describe("blame.init", function()
 			keys = {
 				navigate_forward = "L",
 				navigate_backward = "H",
+				close = { "q", "<C-c>" },
 			},
 		}
 
@@ -37,6 +38,12 @@ describe("blame.init", function()
 
 		assert.are.equal("L", blame.options.keys.navigate_forward)
 		assert.are.equal("H", blame.options.keys.navigate_backward)
+		assert.are.same({ "q", "<C-c>" }, blame.options.keys.close)
+	end)
+
+	it("has default close keys of <ESC>, <C-c> and q", function()
+		blame.setup({})
+		assert.are.same({ "<ESC>", "<C-c>", "q" }, blame.options.keys.close)
 	end)
 
 	it("shows a warning if the current file is not in a git repository", function()

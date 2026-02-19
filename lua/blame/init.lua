@@ -4,12 +4,14 @@ local M = {}
 
 local BlameView = require("blame.blame_view")
 local Git = require("blame.git")
+local utils = require("blame.utils")
 
 -- TODO: Fix potential redundancy: The default `opts` from `lazy.lua` are passed to `M.setup` by lazy.vim.
 M.defaults = {
 	keys = {
 		navigate_forward = "<CR>",
 		navigate_backward = "<BS>",
+		close = { "<ESC>", "<C-c>", "q" },
 	},
 }
 
@@ -42,20 +44,25 @@ function M.show_blame_info()
 	blame_view:mount()
 
 	-- Keymap for breadcrumb navigation (forward)
-	blame_view.blame_popup_instance:map("n", M.options.keys.navigate_forward, function()
+	utils.add_keymap(blame_view.blame_popup_instance, M.options.keys.navigate_forward, function()
 		blame_view:navigate_forward()
-	end, {
-		noremap = true,
-		silent = true,
-	})
+	end)
 
 	-- Keymap for breadcrumb navigation (backward)
-	blame_view.blame_popup_instance:map("n", M.options.keys.navigate_backward, function()
+	utils.add_keymap(blame_view.blame_popup_instance, M.options.keys.navigate_backward, function()
 		blame_view:navigate_backward()
-	end, {
-		noremap = true,
-		silent = true,
-	})
+	end)
+
+	-- Keymap for closing the blame view
+	local popups_list = {
+		blame_view.blame_popup_instance,
+		blame_view.file_popup_instance,
+	}
+	for _, popup in pairs(popups_list) do
+		utils.add_keymap(popup, M.options.keys.close, function()
+			blame_view:close()
+		end)
+	end
 end
 
 return M

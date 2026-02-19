@@ -25,9 +25,22 @@ function M.initialize_cursor_position(original_win, win)
 		vim.fn.winrestview({ topline = original_top_line })
 	end)
 
-	-- Synchronize scrolling
 	vim.api.nvim_set_option_value("scrollbind", true, { scope = "local", win = win })
 	vim.api.nvim_set_option_value("cursorbind", true, { scope = "local", win = win })
+end
+
+--- Adds a keymap for one or many keys to a popup.
+--- @param popup table The nui.popup instance.
+--- @param keys string|table The key or list of keys to map.
+--- @param handler function The function to execute.
+function M.add_keymap(popup, keys, handler)
+	local key_list = type(keys) == "table" and keys or { keys }
+	for _, key in ipairs(key_list) do
+		popup:map("n", key, handler, {
+			noremap = true,
+			silent = true,
+		})
+	end
 end
 
 return M

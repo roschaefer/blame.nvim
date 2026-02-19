@@ -7,6 +7,7 @@ return {
 			keys = {
 				navigate_forward = "<CR>",
 				navigate_backward = "<BS>",
+				close = { "<ESC>", "<C-c>", "q" },
 			},
 		},
 		cmd = {
