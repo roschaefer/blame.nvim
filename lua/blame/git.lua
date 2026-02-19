@@ -56,12 +56,19 @@ function Git:new(buf_id)
 end
 
 --- Retrieves the git blame output for a given file.
---- @param commit_hash_to_blame string|nil Optional: The commit hash to blame from.
+--- @param commit_info table|nil Optional: The commit info to blame from.
 --- @return string|nil The stdout of the git blame command, or nil if an error occurred.
-function Git:get_blame_output(commit_hash_to_blame)
+function Git:get_blame_output(commit_info)
 	local blame_cmd
-	if commit_hash_to_blame then
-		blame_cmd = { "git", "blame", "--line-porcelain", commit_hash_to_blame, "--", self.original_file }
+	if commit_info and commit_info.previous then
+		blame_cmd = {
+			"git",
+			"blame",
+			"--line-porcelain",
+			commit_info.previous.commit,
+			"--",
+			commit_info.previous.filename,
+		}
 	else
 		blame_cmd = { "git", "blame", "--line-porcelain", self.original_file }
 	end
@@ -75,44 +82,28 @@ function Git:get_blame_output(commit_hash_to_blame)
 	return blame_result.stdout
 end
 
---- Retrieves the content of a file at a specific commit.
---- @param file_path_relative_to_git_root string The path to the file relative to the git root.
---- @param commit_hash string The commit hash.
---- @return string|nil The content of the file, or nil if an error occurred.
-function Git:get_file_content_at_commit(file_path_relative_to_git_root, commit_hash)
-	local git_show_result = vim.system({
-		"git",
-		"show",
-		commit_hash .. ":" .. file_path_relative_to_git_root,
-	}, { text = true, cwd = self.git_root }):wait()
-
-	if git_show_result.code ~= 0 then
-		vim.notify(
-			"blame.nvim: Git show command failed. Stderr: " .. (git_show_result.stderr or ""),
-			vim.log.levels.WARN
-		)
-		return nil
-	end
-	return git_show_result.stdout
-end
-
 --- Retrieves the content of a file, either at a specific commit or the current working tree version.
---- @param commit_hash string|nil Optional: The commit hash to retrieve the file content from. If nil, the current working tree content is returned.
+--- @param commit_info table|nil Optional: The commit info to retrieve the file content from. If nil, the current working tree content is returned.
 --- @return table|nil A table of lines representing the file content, or nil if an error occurred.
-function Git:get_file_content(commit_hash)
+function Git:get_file_content(commit_info)
 	local content_str
-	if commit_hash then
-		local file_path_relative_to_git_root = vim.fs.relpath(self.git_root, self.original_file)
-		if not file_path_relative_to_git_root then
+	if commit_info and commit_info.previous then
+		local git_show_result = vim.system({
+			"git",
+			"show",
+			commit_info.previous.commit .. ":" .. commit_info.previous.filename,
+		}, { text = true, cwd = self.git_root }):wait()
+
+		if git_show_result.code ~= 0 then
+			vim.notify(
+				"blame.nvim: Git show command failed. Stderr: " .. (git_show_result.stderr or ""),
+				vim.log.levels.WARN
+			)
 			return nil
 		end
-		content_str = self:get_file_content_at_commit(file_path_relative_to_git_root, commit_hash)
-		if not content_str then
-			return nil
-		end
+		content_str = git_show_result.stdout
 	else
-		-- Read from file if commit_hash is nil
-		-- vim.fn.readfile returns a list of lines
+		-- Read from file if commit_info is nil or has no previous (working tree)
 		return vim.fn.readfile(self.original_file)
 	end
 	return vim.split(content_str, "\n")

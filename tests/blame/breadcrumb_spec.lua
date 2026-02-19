@@ -11,37 +11,43 @@ describe("blame.breadcrumb", function()
 
 	it("pushes a new item", function()
 		local bc = Breadcrumb:new()
-		local added = bc:push("hash1")
+		local item = { header = { commit = "hash1" } }
+		local added = bc:push(item)
 		assert.is_true(added)
-		assert.are.same({ "hash1" }, bc.stack) -- Stack should just have the current item
-		assert.are.equal("hash1", bc:current())
+		assert.are.same({ item }, bc.stack)
+		assert.are.equal(item, bc:current())
 	end)
 
 	it("does not push a duplicate item", function()
 		local bc = Breadcrumb:new()
-		bc:push("hash1")
-		local added = bc:push("hash1")
+		local item = { header = { commit = "hash1" } }
+		bc:push(item)
+		local added = bc:push(item)
 		assert.is_false(added)
-		assert.are.same({ "hash1" }, bc.stack)
-		assert.are.equal("hash1", bc:current())
+		assert.are.same({ item }, bc.stack)
+		assert.are.equal(item, bc:current())
 	end)
 
 	it("pushes multiple items", function()
 		local bc = Breadcrumb:new()
-		bc:push("hash1")
-		bc:push("hash2")
-		assert.are.same({ "hash1", "hash2" }, bc.stack)
-		assert.are.equal("hash2", bc:current())
+		local item1 = { header = { commit = "hash1" } }
+		local item2 = { header = { commit = "hash2" } }
+		bc:push(item1)
+		bc:push(item2)
+		assert.are.same({ item1, item2 }, bc.stack)
+		assert.are.equal(item2, bc:current())
 	end)
 
 	it("pops an item", function()
 		local bc = Breadcrumb:new()
-		bc:push("hash1")
-		bc:push("hash2")
-		local item = bc:pop() -- item should be the new current, which is hash1
-		assert.are.equal("hash2", item)
-		assert.are.equal("hash1", bc:current())
-		assert.are.same({ "hash1" }, bc.stack)
+		local item1 = { header = { commit = "hash1" } }
+		local item2 = { header = { commit = "hash2" } }
+		bc:push(item1)
+		bc:push(item2)
+		local popped_item = bc:pop()
+		assert.are.equal(item2, popped_item)
+		assert.are.equal(item1, bc:current())
+		assert.are.same({ item1 }, bc.stack)
 	end)
 
 	it("returns nil when popping from an empty stack", function()
@@ -54,7 +60,8 @@ describe("blame.breadcrumb", function()
 
 	it("does not push '00000000' to the stack", function()
 		local bc = Breadcrumb:new()
-		local added = bc:push("00000000")
+		local item = { header = { commit = "0000000000000000000000000000000000000000" } }
+		local added = bc:push(item)
 		assert.is_false(added)
 		assert.are.same({}, bc.stack)
 		assert.is_nil(bc:current())

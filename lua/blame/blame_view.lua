@@ -101,8 +101,8 @@ function BlameView:mount()
 	end
 end
 
-function BlameView:update_file_buffer_content(commit_hash)
-	local content = self.git_instance:get_file_content(commit_hash)
+function BlameView:update_file_buffer_content(commit_info)
+	local content = self.git_instance:get_file_content(commit_info)
 
 	if not content then
 		return
@@ -118,8 +118,8 @@ function BlameView:update_file_buffer_content(commit_hash)
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.file_popup_instance.bufnr })
 end
 
-function BlameView:update_blame(commit_hash)
-	local blame_result_stdout = self.git_instance:get_blame_output(commit_hash)
+function BlameView:update_blame(commit_info)
+	local blame_result_stdout = self.git_instance:get_blame_output(commit_info)
 	self.blame_lines = {}
 
 	if not blame_result_stdout then
@@ -159,11 +159,11 @@ function BlameView:update_blame(commit_hash)
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.blame_popup_instance.bufnr })
 end
 
-function BlameView:update_buffers(commit_hash)
-	local title = commit_hash or "working tree"
+function BlameView:update_buffers(commit_info)
+	local title = (commit_info and commit_info.previous and commit_info.previous.commit) or "working tree"
 	self.file_popup_instance.border:set_text("top", title)
-	self:update_file_buffer_content(commit_hash)
-	self:update_blame(commit_hash)
+	self:update_file_buffer_content(commit_info)
+	self:update_blame(commit_info)
 end
 
 function BlameView:navigate_forward()
@@ -172,10 +172,15 @@ function BlameView:navigate_forward()
 	if not commit_info then
 		return
 	end
-	local new_commit_hash = commit_info.header.commit
 
-	if self.breadcrumb:push(new_commit_hash) then
-		self:update_buffers(self.breadcrumb:current())
+	if not commit_info.previous then
+		vim.notify("blame.nvim: No previous commit for this line (boundary commit).", vim.log.levels.INFO)
+		return
+	end
+
+	if self.breadcrumb:push(commit_info) then
+		local current = self.breadcrumb:current()
+		self:update_buffers(current)
 	end
 end
 
@@ -185,7 +190,8 @@ function BlameView:navigate_backward()
 		return
 	end
 	self.breadcrumb:pop()
-	self:update_buffers(self.breadcrumb:current())
+	local current = self.breadcrumb:current()
+	self:update_buffers(current)
 end
 
 return BlameView
