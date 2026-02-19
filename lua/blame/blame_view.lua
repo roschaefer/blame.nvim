@@ -1,15 +1,49 @@
-local Popups = {}
-Popups.__index = Popups
+local BlameView = {}
+BlameView.__index = BlameView
+
+local Popup = require("nui.popup")
+local Layout = require("nui.layout")
 
 local parser = require("blame.parser")
 local NuiLine = require("nui.line")
 local NuiText = require("nui.text")
 local Breadcrumb = require("blame.breadcrumb")
+local utils = require("blame.utils")
 
-function Popups:new(dependencies, current_file_buf)
+function BlameView:new(dependencies, current_file_buf)
 	local git_instance = dependencies.git_instance
-	local blame_popup_instance = dependencies.blame_popup_instance
-	local file_popup_instance = dependencies.file_popup_instance
+
+	-- Create blame_popup for blame information
+	local blame_popup_instance = Popup({
+		border = { style = "rounded" },
+		focusable = true,
+		win_options = {
+			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+			number = false,
+			relativenumber = false,
+			cursorline = true,
+			wrap = false,
+			winfixwidth = true,
+		},
+	})
+
+	-- Create file_popup for file content
+	local file_popup_instance = Popup({
+		border = {
+			style = "rounded",
+			text = {
+				top = "",
+			},
+		},
+		focusable = true,
+		win_options = {
+			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
+			number = true,
+			relativenumber = true,
+			cursorline = true,
+			wrap = false,
+		},
+	})
 
 	local current_filetype = vim.api.nvim_get_option_value("filetype", { scope = "local", buf = current_file_buf })
 	local instance = {
@@ -22,11 +56,52 @@ function Popups:new(dependencies, current_file_buf)
 		breadcrumb = Breadcrumb:new(),
 		blame_lines = {},
 	}
-	setmetatable(instance, Popups)
+
+	-- Define the layout: blame_popup on left, file_popup on right
+	instance.layout = Layout(
+		{ relative = "editor", position = "50%", size = "90%" }, -- Options for the main layout
+		Layout.Box({
+			Layout.Box(blame_popup_instance, { size = "25%" }), -- Pass popup directly as component
+			Layout.Box(file_popup_instance, { size = "75%" }), -- Pass popup directly as component
+		}, { dir = "row" })
+	)
+
+	setmetatable(instance, BlameView)
 	return instance
 end
 
-function Popups:update_file_buffer_content(commit_hash)
+function BlameView:mount()
+	local current_file_win = vim.api.nvim_get_current_win()
+	self.layout:mount()
+
+	-- Set current window to the blame popup for initial blame display
+	if self.blame_popup_instance and self.blame_popup_instance.winid then
+		vim.api.nvim_set_current_win(self.blame_popup_instance.winid)
+	end
+
+	utils.initialize_cursor_position(current_file_win, self.blame_popup_instance.winid)
+	utils.initialize_cursor_position(current_file_win, self.file_popup_instance.winid)
+
+	local popups_list = {
+		self.blame_popup_instance,
+		self.file_popup_instance,
+	}
+	for _, popup in pairs(popups_list) do
+		popup:on("BufLeave", function()
+			vim.schedule(function()
+				local curr_bufnr = vim.api.nvim_get_current_buf()
+				for _, p in pairs(popups_list) do
+					if p.bufnr == curr_bufnr then
+						return
+					end
+				end
+				self.layout:unmount()
+			end)
+		end)
+	end
+end
+
+function BlameView:update_file_buffer_content(commit_hash)
 	local content = self.git_instance:get_file_content(commit_hash)
 
 	if not content then
@@ -43,7 +118,7 @@ function Popups:update_file_buffer_content(commit_hash)
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.file_popup_instance.bufnr })
 end
 
-function Popups:update_blame(commit_hash)
+function BlameView:update_blame(commit_hash)
 	local blame_result_stdout = self.git_instance:get_blame_output(commit_hash)
 	self.blame_lines = {}
 
@@ -83,14 +158,14 @@ function Popups:update_blame(commit_hash)
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.blame_popup_instance.bufnr })
 end
 
-function Popups:update_buffers(commit_hash)
+function BlameView:update_buffers(commit_hash)
 	local title = commit_hash or "working tree"
 	self.file_popup_instance.border:set_text("top", title)
 	self:update_file_buffer_content(commit_hash)
 	self:update_blame(commit_hash)
 end
 
-function Popups:navigate_forward()
+function BlameView:navigate_forward()
 	local line_num = vim.api.nvim_win_get_cursor(0)[1]
 	local commit_info = self.blame_lines[line_num]
 	if not commit_info then
@@ -103,7 +178,7 @@ function Popups:navigate_forward()
 	end
 end
 
-function Popups:navigate_backward()
+function BlameView:navigate_backward()
 	if #self.breadcrumb.stack == 0 then
 		vim.notify("blame.nvim: No more history to go back to.", vim.log.levels.INFO)
 		return
@@ -112,4 +187,4 @@ function Popups:navigate_backward()
 	self:update_buffers(self.breadcrumb:current())
 end
 
-return Popups
+return BlameView
