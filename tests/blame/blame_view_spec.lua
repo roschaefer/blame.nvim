@@ -48,9 +48,10 @@ describe("blame.blame_view", function()
 		assert.is_not_nil(blame_view)
 		---@cast blame_view -nil
 
-		blame_view:update_file_buffer_content("abc1234")
+		local commit_info = { previous = { commit = "abc1234", filename = "file.lua" } }
+		blame_view:update_file_buffer_content(commit_info)
 
-		assert.stub(mock_git.get_file_content).was.called_with(mock_git, "abc1234")
+		assert.stub(mock_git.get_file_content).was.called_with(mock_git, commit_info)
 
 		local content = vim.api.nvim_buf_get_lines(blame_view.file_popup_instance.bufnr, 0, -1, false)
 		assert.are.same({ "line 1", "line 2" }, content)

@@ -17,11 +17,12 @@ end
 
 function Breadcrumb:push(new_item)
 	-- Do not add the special revision "00000000" to the stack
-	if new_item == "00000000" then
+	if new_item.header.commit:match("^00000000") then
 		return false -- not added
 	end
 	-- Check if the new_item is the same as the current item
-	if new_item == self:current() then
+	local current = self:current()
+	if current and new_item.header.commit == current.header.commit then
 		return false -- not added
 	end
 	table.insert(self.stack, new_item) -- Add the new item to the stack
