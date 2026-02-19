@@ -126,19 +126,20 @@ function BlameView:update_blame(commit_hash)
 		return
 	end
 
-	self.blame_lines = parser.parse_blame_output(blame_result_stdout)
+	local blame_result = parser.parse_blame_output(blame_result_stdout)
+	self.blame_lines = blame_result.lines
 
 	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.blame_popup_instance.bufnr })
 
 	local previous_commit = ""
 	for i, line in ipairs(self.blame_lines) do
-		local blame_info_str = string.format("%s %s (%s)", line.commit, line.author, line.date)
-		if line.commit ~= previous_commit then
-			local hex_color = "#" .. line.commit:sub(1, 6)
-			local highlight_group = "GitBlameCommit_" .. line.commit
+		local blame_info_str = string.format("%s %s (%s)", line.header.commit, line.author, line.date)
+		if line.header.commit ~= previous_commit then
+			local hex_color = "#" .. line.header.commit:sub(1, 6)
+			local highlight_group = "GitBlameCommit_" .. line.header.commit
 			vim.cmd("highlight " .. highlight_group .. " guifg=" .. hex_color)
 
-			local commit_text = NuiText(line.commit:sub(1, 8), highlight_group)
+			local commit_text = NuiText(line.header.commit:sub(1, 8), highlight_group)
 			local author_and_date_text = NuiText(" " .. line.author .. " (" .. line.date .. ")")
 
 			local nui_line = NuiLine({
@@ -147,7 +148,7 @@ function BlameView:update_blame(commit_hash)
 			})
 
 			nui_line:render(self.blame_popup_instance.bufnr, self.ns_id, i)
-			previous_commit = line.commit
+			previous_commit = line.header.commit
 		else
 			local nui_line = NuiLine({ NuiText(string.rep(" ", #blame_info_str)) })
 			nui_line:render(self.blame_popup_instance.bufnr, self.ns_id, i)
@@ -171,7 +172,7 @@ function BlameView:navigate_forward()
 	if not commit_info then
 		return
 	end
-	local new_commit_hash = commit_info.commit
+	local new_commit_hash = commit_info.header.commit
 
 	if self.breadcrumb:push(new_commit_hash) then
 		self:update_buffers(self.breadcrumb:current())
