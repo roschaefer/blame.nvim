@@ -24,7 +24,7 @@ describe("blame.blame_view", function()
 
 		local blame_view = BlameView:new({
 			git_instance = mock_git,
-		}, buf_id)
+		})
 
 		assert.is_not_nil(blame_view)
 		---@cast blame_view -nil
@@ -44,7 +44,7 @@ describe("blame.blame_view", function()
 
 		local blame_view = BlameView:new({
 			git_instance = mock_git,
-		}, buf_id)
+		})
 		assert.is_not_nil(blame_view)
 		---@cast blame_view -nil
 
@@ -62,7 +62,7 @@ describe("blame.blame_view", function()
 	it("mounts the layout and initializes positions", function()
 		local buf_id = vim.api.nvim_create_buf(false, true)
 		local mock_git = {}
-		local blame_view = BlameView:new({ git_instance = mock_git }, buf_id)
+		local blame_view = BlameView:new({ git_instance = mock_git })
 
 		local blame_view_layout_mount_spy = spy.on(blame_view.layout, "mount")
 		local utils = require("blame.utils")
