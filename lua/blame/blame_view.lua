@@ -198,4 +198,8 @@ function BlameView:navigate_backward()
 	self:update_buffers(current)
 end
 
+function BlameView:close()
+	self.layout:unmount()
+end
+
 return BlameView

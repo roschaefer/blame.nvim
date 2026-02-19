@@ -53,6 +53,7 @@ Then, run `:Lazy install` in Neovim to install the plugin.
 *   **Testing Framework:** Unit tests are written using `luassert` and are located in `tests/lua/`.
 *   **Development Environment:** The presence of `.luarc.json` suggests configuration for Lua language servers (e.g., sumneko/lua-language-server) to provide features like auto-completion, diagnostics, and workspace-wide library definitions for an improved development experience.
 *   **Git Integration:** Relies on standard Git commands (`git blame`, `git show`) for its core functionality.
+*   **Configuration Consistency:** Default configuration options (`M.defaults` in `lua/blame/init.lua`) must be kept synchronized with the `opts` field in `lazy.lua` to ensure consistent behavior across different installation methods.
 
 ## Testing
 
