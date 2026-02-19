@@ -1,7 +1,6 @@
 -- tests/lua/git_spec.lua
 
 local assert = require("luassert")
-local stub = require("luassert.stub")
 local Git = require("blame.git")
 
 describe("blame.git", function()
