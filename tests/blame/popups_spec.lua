@@ -5,6 +5,15 @@ local stub = require("luassert.stub")
 local Popups = require("blame.popups")
 
 describe("blame.popups", function()
+	local snapshot
+	before_each(function()
+		snapshot = assert:snapshot()
+	end)
+
+	after_each(function()
+		snapshot:revert()
+	end)
+
 	it("initializes a new Popups instance", function()
 		local buf_id = vim.api.nvim_create_buf(false, true)
 		local mock_git = {

@@ -6,6 +6,15 @@ local Git = require("blame.git")
 
 describe("blame.git", function()
 	local test_file = "README.md"
+	local snapshot
+
+	before_each(function()
+		snapshot = assert:snapshot()
+	end)
+
+	after_each(function()
+		snapshot:revert()
+	end)
 
 	describe("Git:new", function()
 		it("initializes a new Git instance for README.md", function()

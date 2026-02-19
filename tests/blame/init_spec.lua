@@ -5,6 +5,15 @@ local stub = require("luassert.stub")
 local blame = require("blame")
 
 describe("blame.init", function()
+	local snapshot
+	before_each(function()
+		snapshot = assert:snapshot()
+	end)
+
+	after_each(function()
+		snapshot:revert()
+	end)
+
 	it("registers the Blame command on setup", function()
 		-- Ensure command doesn't already exist or handle it if it does
 		pcall(vim.api.nvim_del_user_command, "Blame")
@@ -51,7 +60,6 @@ describe("blame.init", function()
 
 		assert.stub(notify_stub).was.called_with("blame.nvim: Not in a git repository.", vim.log.levels.WARN)
 
-		notify_stub:revert()
 		vim.api.nvim_set_current_win(old_win)
 		vim.api.nvim_win_close(new_win, true)
 		vim.api.nvim_buf_delete(buf_id, { force = true })
