@@ -1,6 +1,7 @@
 -- tests/lua/git_spec.lua
 
 local assert = require("luassert")
+local stub = require("luassert.stub")
 local Git = require("blame.git")
 
 describe("blame.git", function()
@@ -33,6 +34,7 @@ describe("blame.git", function()
 			assert.is_nil(git)
 
 			vim.api.nvim_buf_delete(buf_id, { force = true })
+			vim.fn.delete(tmpdir, "rf")
 		end)
 	end)
 

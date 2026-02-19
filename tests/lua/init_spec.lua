@@ -1,6 +1,7 @@
 -- tests/lua/init_spec.lua
 
 local assert = require("luassert")
+local stub = require("luassert.stub")
 local blame = require("blame")
 
 describe("blame.init", function()
@@ -44,11 +45,13 @@ describe("blame.init", function()
 			col = 0,
 		})
 
+		local notify_stub = stub(vim, "notify")
+
 		blame.show_blame_info()
 
-		local history = vim.fn.execute("messages")
-		assert.is_true(string.match(history, "Not in a git repository") ~= nil)
+		assert.stub(notify_stub).was.called_with("blame.nvim: Not in a git repository.", vim.log.levels.WARN)
 
+		notify_stub:revert()
 		vim.api.nvim_set_current_win(old_win)
 		vim.api.nvim_win_close(new_win, true)
 		vim.api.nvim_buf_delete(buf_id, { force = true })
