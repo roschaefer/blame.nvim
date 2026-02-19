@@ -32,7 +32,7 @@ function M.show_blame_info()
 
 	local blame_view = BlameView:new({
 		git_instance = git_instance,
-	}, current_file_buf)
+	})
 	if not blame_view then
 		return
 	end

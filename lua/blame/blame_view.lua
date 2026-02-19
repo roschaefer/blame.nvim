@@ -10,7 +10,7 @@ local NuiText = require("nui.text")
 local Breadcrumb = require("blame.breadcrumb")
 local utils = require("blame.utils")
 
-function BlameView:new(dependencies, current_file_buf)
+function BlameView:new(dependencies)
 	local git_instance = dependencies.git_instance
 
 	-- Create blame_popup for blame information
@@ -45,11 +45,8 @@ function BlameView:new(dependencies, current_file_buf)
 		},
 	})
 
-	local current_filetype = vim.api.nvim_get_option_value("filetype", { scope = "local", buf = current_file_buf })
 	local instance = {
-		current_file_buf = current_file_buf,
 		git_instance = git_instance,
-		current_filetype = current_filetype,
 		blame_popup_instance = blame_popup_instance,
 		file_popup_instance = file_popup_instance,
 		ns_id = vim.api.nvim_create_namespace("blame"),
@@ -108,13 +105,22 @@ function BlameView:update_file_buffer_content(commit_info)
 		return
 	end
 
+	local title = (commit_info and commit_info.previous and commit_info.previous.commit) or "working tree"
+	self.file_popup_instance.border:set_text("top", title)
+
 	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.file_popup_instance.bufnr })
 	vim.api.nvim_buf_set_lines(self.file_popup_instance.bufnr, 0, -1, false, content)
-	vim.api.nvim_set_option_value(
-		"filetype",
-		self.current_filetype,
-		{ scope = "local", buf = self.file_popup_instance.bufnr }
-	)
+
+	local filetype
+	if commit_info and commit_info.previous and commit_info.previous.filename then
+		filetype = vim.filetype.match({ filename = commit_info.previous.filename })
+	else
+		filetype = vim.filetype.match({ filename = self.git_instance.original_file })
+	end
+
+	if filetype then
+		vim.api.nvim_set_option_value("filetype", filetype, { scope = "local", buf = self.file_popup_instance.bufnr })
+	end
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.file_popup_instance.bufnr })
 end
 
@@ -160,8 +166,6 @@ function BlameView:update_blame(commit_info)
 end
 
 function BlameView:update_buffers(commit_info)
-	local title = (commit_info and commit_info.previous and commit_info.previous.commit) or "working tree"
-	self.file_popup_instance.border:set_text("top", title)
 	self:update_file_buffer_content(commit_info)
 	self:update_blame(commit_info)
 end

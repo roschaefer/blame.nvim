@@ -106,7 +106,7 @@ function Git:get_file_content(commit_info)
 		-- Read from file if commit_info is nil or has no previous (working tree)
 		return vim.fn.readfile(self.original_file)
 	end
-	return vim.split(content_str, "\n")
+	return vim.split(content_str or "", "\n")
 end
 
 return Git
