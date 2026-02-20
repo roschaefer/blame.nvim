@@ -39,6 +39,8 @@ describe("blame.blame_view", function()
 	it("updates file buffer content", function()
 		local buf_id = vim.api.nvim_create_buf(false, true)
 		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
 			get_file_content = stub({}, "get_file_content", { "line 1", "line 2" }),
 		}
 
@@ -48,13 +50,51 @@ describe("blame.blame_view", function()
 		assert.is_not_nil(blame_view)
 		---@cast blame_view -nil
 
-		local commit_info = { previous = { commit = "abc1234", filename = "file.lua" } }
-		blame_view:update_file_buffer_content(commit_info)
+		local set_text_stub = stub(blame_view.file_popup_instance.border, "set_text")
+
+		local commit_info = { previous = { commit = "abc1234567890", filename = "other_file.lua" } }
+		blame_view:update_file(commit_info)
 
 		assert.stub(mock_git.get_file_content).was.called_with(mock_git, commit_info)
 
 		local content = vim.api.nvim_buf_get_lines(blame_view.file_popup_instance.bufnr, 0, -1, false)
 		assert.are.same({ "line 1", "line 2" }, content)
+
+		-- Verify title of file_popup
+		assert.stub(set_text_stub).was.called_with(blame_view.file_popup_instance.border, "top", "other_file.lua")
+
+		-- Case for working tree
+		blame_view:update_file(nil)
+		assert.stub(set_text_stub).was.called_with(blame_view.file_popup_instance.border, "top", "file.lua")
+
+		vim.api.nvim_buf_delete(buf_id, { force = true })
+	end)
+
+	it("updates blame buffer content and sets title", function()
+		local buf_id = vim.api.nvim_create_buf(false, true)
+		local mock_git = {
+			get_blame_output = stub({}, "get_blame_output", "abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename file.lua\n\tline content\n"),
+		}
+
+		local blame_view = BlameView:new({
+			git_instance = mock_git,
+		})
+		assert.is_not_nil(blame_view)
+		---@cast blame_view -nil
+
+		local set_text_stub = stub(blame_view.blame_popup_instance.border, "set_text")
+
+		local commit_info = { previous = { commit = "1234567890abcdef", filename = "file.lua" } }
+		blame_view:update_blame(commit_info)
+
+		assert.stub(mock_git.get_blame_output).was.called_with(mock_git, commit_info)
+
+		-- Verify title of blame_popup
+		assert.stub(set_text_stub).was.called_with(blame_view.blame_popup_instance.border, "top", "12345678")
+
+		-- Case for working tree
+		blame_view:update_blame(nil)
+		assert.stub(set_text_stub).was.called_with(blame_view.blame_popup_instance.border, "top", "")
 
 		vim.api.nvim_buf_delete(buf_id, { force = true })
 	end)

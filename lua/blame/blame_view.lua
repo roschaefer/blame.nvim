@@ -15,7 +15,12 @@ function BlameView:new(dependencies)
 
 	-- Create blame_popup for blame information
 	local blame_popup_instance = Popup({
-		border = { style = "rounded" },
+		border = {
+			style = "rounded",
+			text = {
+				top = "",
+			},
+		},
 		focusable = true,
 		win_options = {
 			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
@@ -98,14 +103,19 @@ function BlameView:mount()
 	end
 end
 
-function BlameView:update_file_buffer_content(commit_info)
+function BlameView:update_file(commit_info)
 	local content = self.git_instance:get_file_content(commit_info)
 
 	if not content then
 		return
 	end
 
-	local title = (commit_info and commit_info.previous and commit_info.previous.commit) or "working tree"
+	local title
+	if commit_info and commit_info.previous and commit_info.previous.filename then
+		title = commit_info.previous.filename
+	else
+		title = self.git_instance.original_file:sub(#self.git_instance.git_root + 2)
+	end
 	self.file_popup_instance.border:set_text("top", title)
 
 	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.file_popup_instance.bufnr })
@@ -131,6 +141,9 @@ function BlameView:update_blame(commit_info)
 	if not blame_result_stdout then
 		return
 	end
+
+	local title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8)) or ""
+	self.blame_popup_instance.border:set_text("top", title)
 
 	local blame_result = parser.parse_blame_output(blame_result_stdout)
 	self.blame_lines = blame_result.lines
@@ -166,7 +179,7 @@ function BlameView:update_blame(commit_info)
 end
 
 function BlameView:update_buffers(commit_info)
-	self:update_file_buffer_content(commit_info)
+	self:update_file(commit_info)
 	self:update_blame(commit_info)
 end
 
