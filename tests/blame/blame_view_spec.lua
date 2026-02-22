@@ -75,6 +75,34 @@ describe("blame.blame_view", function()
 		vim.api.nvim_buf_delete(buf_id, { force = true })
 	end)
 
+	it("removes all remaining lines when updating the view with fewer lines", function()
+		local buf_id = vim.api.nvim_create_buf(false, true)
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", "abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename file.lua\n\tline content 1\n"),
+		}
+
+		local blame_view = BlameView:new({
+			git_instance = mock_git,
+		})
+
+		-- Pre-fill buffers with more lines
+		vim.api.nvim_buf_set_lines(blame_view.blame_popup_instance.bufnr, 0, -1, false, { "old line 1", "old line 2", "old line 3" })
+		vim.api.nvim_buf_set_lines(blame_view.file_popup_instance.bufnr, 0, -1, false, { "old line 1", "old line 2", "old line 3" })
+
+		blame_view:update_view(nil)
+
+		-- Verify buffers have exactly 1 line (from the mock blame output)
+		local blame_content = vim.api.nvim_buf_get_lines(blame_view.blame_popup_instance.bufnr, 0, -1, false)
+		local file_content = vim.api.nvim_buf_get_lines(blame_view.file_popup_instance.bufnr, 0, -1, false)
+
+		assert.are.equal(1, #blame_content)
+		assert.are.equal(1, #file_content)
+
+		vim.api.nvim_buf_delete(buf_id, { force = true })
+	end)
+
 	it("mounts the layout and initializes positions", function()
 		local buf_id = vim.api.nvim_create_buf(false, true)
 		local mock_git = {}
