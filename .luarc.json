@@ -12,6 +12,7 @@
     "lua"
   ],
   "files.exclude": [
-    "tests/minit-test.lua"
+    "tests/minit-test.lua",
+    ".git"
   ]
 }
