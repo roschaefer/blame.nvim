@@ -10,5 +10,8 @@
     "${3rd}/luassert/library",
     "lua-language-server",
     "lua"
+  ],
+  "files.exclude": [
+    "tests/minit-test.lua"
   ]
 }
