@@ -158,8 +158,8 @@ function BlameView:update_view(commit_info)
 	end
 
 	-- Clear remaining lines in both buffers
-	vim.api.nvim_buf_set_lines(self.blame_popup_instance.bufnr, #self.blame_lines + 1, -1, false, {})
-	vim.api.nvim_buf_set_lines(self.file_popup_instance.bufnr, #self.blame_lines + 1, -1, false, {})
+	vim.api.nvim_buf_set_lines(self.blame_popup_instance.bufnr, #self.blame_lines, -1, false, {})
+	vim.api.nvim_buf_set_lines(self.file_popup_instance.bufnr, #self.blame_lines, -1, false, {})
 
 	-- Set filetype for highlighting
 	local filetype
