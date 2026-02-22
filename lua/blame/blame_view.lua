@@ -103,24 +103,65 @@ function BlameView:mount()
 	end
 end
 
-function BlameView:update_file(commit_info)
-	local content = self.git_instance:get_file_content(commit_info)
+function BlameView:update_view(commit_info)
+	local blame_result_stdout = self.git_instance:get_blame_output(commit_info)
+	self.blame_lines = {}
 
-	if not content then
+	if not blame_result_stdout then
 		return
 	end
 
-	local title
+	local blame_title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8)) or ""
+	self.blame_popup_instance.border:set_text("top", blame_title)
+
+	local file_title
 	if commit_info and commit_info.previous and commit_info.previous.filename then
-		title = commit_info.previous.filename
+		file_title = commit_info.previous.filename
 	else
-		title = self.git_instance.original_file:sub(#self.git_instance.git_root + 2)
+		file_title = self.git_instance.original_file:sub(#self.git_instance.git_root + 2)
 	end
-	self.file_popup_instance.border:set_text("top", title)
+	self.file_popup_instance.border:set_text("top", file_title)
 
+	local blame_result = parser.parse_blame_output(blame_result_stdout)
+	self.blame_lines = blame_result.lines
+
+	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.blame_popup_instance.bufnr })
 	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.file_popup_instance.bufnr })
-	vim.api.nvim_buf_set_lines(self.file_popup_instance.bufnr, 0, -1, false, content)
 
+	local previous_commit = ""
+	for i, line in ipairs(self.blame_lines) do
+		-- Blame Popup Rendering
+		local blame_info_str = string.format("%s %s (%s)", line.header.commit, line.author, line.date)
+		if line.header.commit ~= previous_commit then
+			local hex_color = "#" .. line.header.commit:sub(1, 6)
+			local highlight_group = "GitBlameCommit_" .. line.header.commit
+			vim.cmd("highlight " .. highlight_group .. " guifg=" .. hex_color)
+
+			local commit_text = NuiText(line.header.commit:sub(1, 8), highlight_group)
+			local author_and_date_text = NuiText(" " .. line.author .. " (" .. line.date .. ")")
+
+			local blame_nui_line = NuiLine({
+				commit_text,
+				author_and_date_text,
+			})
+
+			blame_nui_line:render(self.blame_popup_instance.bufnr, self.ns_id, i)
+			previous_commit = line.header.commit
+		else
+			local blame_nui_line = NuiLine({ NuiText(string.rep(" ", #blame_info_str)) })
+			blame_nui_line:render(self.blame_popup_instance.bufnr, self.ns_id, i)
+		end
+
+		-- File Popup Rendering
+		local file_nui_line = NuiLine({ NuiText(line.line_content) })
+		file_nui_line:render(self.file_popup_instance.bufnr, self.ns_id, i)
+	end
+
+	-- Clear remaining lines in both buffers
+	vim.api.nvim_buf_set_lines(self.blame_popup_instance.bufnr, #self.blame_lines + 1, -1, false, {})
+	vim.api.nvim_buf_set_lines(self.file_popup_instance.bufnr, #self.blame_lines + 1, -1, false, {})
+
+	-- Set filetype for highlighting
 	local filetype
 	if commit_info and commit_info.previous and commit_info.previous.filename then
 		filetype = vim.filetype.match({ filename = commit_info.previous.filename })
@@ -131,56 +172,13 @@ function BlameView:update_file(commit_info)
 	if filetype then
 		vim.api.nvim_set_option_value("filetype", filetype, { scope = "local", buf = self.file_popup_instance.bufnr })
 	end
+
+	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.blame_popup_instance.bufnr })
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.file_popup_instance.bufnr })
 end
 
-function BlameView:update_blame(commit_info)
-	local blame_result_stdout = self.git_instance:get_blame_output(commit_info)
-	self.blame_lines = {}
-
-	if not blame_result_stdout then
-		return
-	end
-
-	local title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8)) or ""
-	self.blame_popup_instance.border:set_text("top", title)
-
-	local blame_result = parser.parse_blame_output(blame_result_stdout)
-	self.blame_lines = blame_result.lines
-
-	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.blame_popup_instance.bufnr })
-
-	local previous_commit = ""
-	for i, line in ipairs(self.blame_lines) do
-		local blame_info_str = string.format("%s %s (%s)", line.header.commit, line.author, line.date)
-		if line.header.commit ~= previous_commit then
-			local hex_color = "#" .. line.header.commit:sub(1, 6)
-			local highlight_group = "GitBlameCommit_" .. line.header.commit
-			vim.cmd("highlight " .. highlight_group .. " guifg=" .. hex_color)
-
-			local commit_text = NuiText(line.header.commit:sub(1, 8), highlight_group)
-			local author_and_date_text = NuiText(" " .. line.author .. " (" .. line.date .. ")")
-
-			local nui_line = NuiLine({
-				commit_text,
-				author_and_date_text,
-			})
-
-			nui_line:render(self.blame_popup_instance.bufnr, self.ns_id, i)
-			previous_commit = line.header.commit
-		else
-			local nui_line = NuiLine({ NuiText(string.rep(" ", #blame_info_str)) })
-			nui_line:render(self.blame_popup_instance.bufnr, self.ns_id, i)
-		end
-	end
-
-	vim.api.nvim_buf_set_lines(self.blame_popup_instance.bufnr, #self.blame_lines + 1, -1, false, {})
-	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.blame_popup_instance.bufnr })
-end
-
 function BlameView:update_buffers(commit_info)
-	self:update_file(commit_info)
-	self:update_blame(commit_info)
+	self:update_view(commit_info)
 end
 
 function BlameView:navigate_forward()

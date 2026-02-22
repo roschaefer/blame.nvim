@@ -82,31 +82,4 @@ function Git:get_blame_output(commit_info)
 	return blame_result.stdout
 end
 
---- Retrieves the content of a file, either at a specific commit or the current working tree version.
---- @param commit_info table|nil Optional: The commit info to retrieve the file content from. If nil, the current working tree content is returned.
---- @return table|nil A table of lines representing the file content, or nil if an error occurred.
-function Git:get_file_content(commit_info)
-	local content_str
-	if commit_info and commit_info.previous then
-		local git_show_result = vim.system({
-			"git",
-			"show",
-			commit_info.previous.commit .. ":" .. commit_info.previous.filename,
-		}, { text = true, cwd = self.git_root }):wait()
-
-		if git_show_result.code ~= 0 then
-			vim.notify(
-				"blame.nvim: Git show command failed. Stderr: " .. (git_show_result.stderr or ""),
-				vim.log.levels.WARN
-			)
-			return nil
-		end
-		content_str = git_show_result.stdout
-	else
-		-- Read from file if commit_info is nil or has no previous (working tree)
-		return vim.fn.readfile(self.original_file)
-	end
-	return vim.split(content_str or "", "\n")
-end
-
 return Git

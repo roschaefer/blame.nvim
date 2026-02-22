@@ -65,45 +65,4 @@ describe("blame.git", function()
 			vim.api.nvim_buf_delete(buf_id, { force = true })
 		end)
 	end)
-
-	describe("get_file_content", function()
-		it("reads README.md content from disk when no commit info is provided", function()
-			local buf_id = vim.api.nvim_create_buf(false, true)
-			vim.api.nvim_buf_set_name(buf_id, test_file)
-			local git = Git:new(buf_id)
-			assert.is_not_nil(git)
-			---@cast git -nil
-
-			local content = git:get_file_content()
-			assert.is_not_nil(content)
-			assert.is_true(#content > 0)
-
-			assert(content)
-			assert.are.equal("# blame.nvim", content[1])
-
-			vim.api.nvim_buf_delete(buf_id, { force = true })
-		end)
-
-		it("retrieves README.md content from HEAD commit info's previous", function()
-			local buf_id = vim.api.nvim_create_buf(false, true)
-			vim.api.nvim_buf_set_name(buf_id, test_file)
-			local git = Git:new(buf_id)
-			assert.is_not_nil(git)
-			---@cast git -nil
-
-			-- Get the latest commit hash for README.md
-			local hash_result = vim.system({ "git", "rev-parse", "HEAD" }, { text = true, cwd = git.git_root }):wait()
-			local head_hash = vim.trim(hash_result.stdout)
-
-			local content = git:get_file_content({ previous = { commit = head_hash, filename = test_file } })
-			assert.is_not_nil(content)
-			assert.is_true(#content > 0)
-
-			-- The first line of README.md should match
-			assert(content)
-			assert.are.equal("# blame.nvim", content[1])
-
-			vim.api.nvim_buf_delete(buf_id, { force = true })
-		end)
-	end)
 end)
