@@ -166,4 +166,101 @@ describe("blame.blame_view", function()
 		blame_view:close()
 		vim.api.nvim_buf_delete(buf_id, { force = true })
 	end)
+
+	it("sets cursor to source_line when navigating forward", function()
+		local buf_id = vim.api.nvim_create_buf(false, true)
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				local lines = {}
+				for i = 1, 50 do
+					table.insert(lines, string.format("abcdef1234567890 %d %d 1", i, i))
+					table.insert(lines, "author Test")
+					table.insert(lines, "author-time 123456789")
+					table.insert(lines, "filename file.lua")
+					table.insert(lines, "\tline content " .. i)
+				end
+				return table.concat(lines, "\n")
+			end,
+		}
+
+		local blame_view = BlameView:new({
+			git_instance = mock_git,
+		})
+
+		blame_view:update_view(nil)
+		blame_view:mount()
+
+		-- Setup some blame lines with source_line
+		blame_view.blame_lines = {
+			{
+				header = { commit = "hash1", source_line = 42, result_line = 1 },
+				previous = { commit = "prev_hash", filename = "file.lua" },
+				author = "Test",
+				date = "2026-02-24",
+			},
+		}
+
+		-- Mock current cursor position in blame popup (line 1)
+		vim.api.nvim_win_set_cursor(blame_view.blame_popup_instance.winid, { 1, 0 })
+
+		-- Execute navigate_forward
+		blame_view:navigate_forward()
+
+		-- Verify actual cursor position
+		assert.are.same({ 42, 0 }, vim.api.nvim_win_get_cursor(blame_view.blame_popup_instance.winid))
+		assert.are.same({ 42, 0 }, vim.api.nvim_win_get_cursor(blame_view.file_popup_instance.winid))
+
+		blame_view:close()
+		vim.api.nvim_buf_delete(buf_id, { force = true })
+	end)
+
+	it("sets cursor to source_line when navigating backward", function()
+		local buf_id = vim.api.nvim_create_buf(false, true)
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				local lines = {}
+				for i = 1, 50 do
+					table.insert(lines, string.format("abcdef1234567890 %d %d 1", i, i))
+					table.insert(lines, "author Test")
+					table.insert(lines, "author-time 123456789")
+					table.insert(lines, "filename file.lua")
+					table.insert(lines, "\tline content " .. i)
+				end
+				return table.concat(lines, "\n")
+			end,
+		}
+
+		local blame_view = BlameView:new({
+			git_instance = mock_git,
+		})
+
+		blame_view:update_view(nil)
+		blame_view:mount()
+
+		-- Setup breadcrumb with two items
+		local item1 = {
+			header = { commit = "hash1", source_line = 10, result_line = 1 },
+			previous = { commit = "prev1", filename = "file.lua" },
+		}
+		local item2 = {
+			header = { commit = "hash2", source_line = 20, result_line = 1 },
+			previous = { commit = "prev2", filename = "file.lua" },
+		}
+		blame_view.breadcrumb:push(item1)
+		blame_view.breadcrumb:push(item2)
+
+		-- Execute navigate_backward (pops item2, current becomes item1)
+		blame_view:navigate_backward()
+
+		-- Verify actual cursor position
+		assert.are.same({ 10, 0 }, vim.api.nvim_win_get_cursor(blame_view.blame_popup_instance.winid))
+		assert.are.same({ 10, 0 }, vim.api.nvim_win_get_cursor(blame_view.file_popup_instance.winid))
+
+		blame_view:close()
+		vim.api.nvim_buf_delete(buf_id, { force = true })
+	end)
 end)
