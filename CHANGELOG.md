@@ -1,5 +1,23 @@
 # Changelog
 
+## [1.2.0](https://github.com/roschaefer/blame.nvim/compare/v1.1.0...v1.2.0) (2026-02-23)
+
+
+### Features
+
+* **blame_view:** switch between popups with &lt;TAB&gt; ([#36](https://github.com/roschaefer/blame.nvim/issues/36)) ([38ef0cf](https://github.com/roschaefer/blame.nvim/commit/38ef0cff603957f723c12653dab8cc223e617f7e))
+* **blame_window:** display commit and filename in the title ([#30](https://github.com/roschaefer/blame.nvim/issues/30)) ([20b750f](https://github.com/roschaefer/blame.nvim/commit/20b750fb18ad476c7b906372bc1ae2819fd260fd))
+
+
+### Bug Fixes
+
+* **blame_view:** remove remaining line after update ([#34](https://github.com/roschaefer/blame.nvim/issues/34)) ([129a311](https://github.com/roschaefer/blame.nvim/commit/129a3117a98685142f3524af70a7e71cf599e36f))
+
+
+### Performance Improvements
+
+* **blame_view:** update views with just one system command ([#33](https://github.com/roschaefer/blame.nvim/issues/33)) ([68c2596](https://github.com/roschaefer/blame.nvim/commit/68c259623ddd90b1bf6679323f9c302ca7399b1d))
+
 ## [1.1.0](https://github.com/roschaefer/blame.nvim/compare/v1.0.0...v1.1.0) (2026-02-20)
 
 
