@@ -29,6 +29,24 @@ function M.initialize_cursor_position(original_win, win)
 	vim.api.nvim_set_option_value("cursorbind", true, { scope = "local", win = win })
 end
 
+--- Sets the cursor position in a window to a specific line.
+--- @param win number The handle of the window.
+--- @param line_num number The line number to set the cursor to.
+function M.set_cursor_to_line(win, line_num)
+	if not win or not vim.api.nvim_win_is_valid(win) then
+		return
+	end
+	local buf = vim.api.nvim_win_get_buf(win)
+	local line_count = vim.api.nvim_buf_line_count(buf)
+	if line_num > line_count then
+		line_num = line_count
+	end
+	if line_num < 1 then
+		line_num = 1
+	end
+	vim.api.nvim_win_set_cursor(win, { line_num, 0 })
+end
+
 --- Adds a keymap for one or many keys to a popup.
 --- @param popup table The nui.popup instance.
 --- @param keys string|table The key or list of keys to map.

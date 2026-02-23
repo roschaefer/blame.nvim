@@ -175,10 +175,11 @@ function BlameView:update_view(commit_info)
 
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.blame_popup_instance.bufnr })
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.file_popup_instance.bufnr })
-end
 
-function BlameView:update_buffers(commit_info)
-	self:update_view(commit_info)
+	if commit_info and commit_info.header and commit_info.header.source_line then
+		utils.set_cursor_to_line(self.blame_popup_instance.winid, commit_info.header.source_line)
+		utils.set_cursor_to_line(self.file_popup_instance.winid, commit_info.header.source_line)
+	end
 end
 
 function BlameView:navigate_forward()
@@ -194,8 +195,7 @@ function BlameView:navigate_forward()
 	end
 
 	if self.breadcrumb:push(commit_info) then
-		local current = self.breadcrumb:current()
-		self:update_buffers(current)
+		self:update_view(self.breadcrumb:current())
 	end
 end
 
@@ -205,8 +205,7 @@ function BlameView:navigate_backward()
 		return
 	end
 	self.breadcrumb:pop()
-	local current = self.breadcrumb:current()
-	self:update_buffers(current)
+	self:update_view(self.breadcrumb:current())
 end
 
 function BlameView:close()

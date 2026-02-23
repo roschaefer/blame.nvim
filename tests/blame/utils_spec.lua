@@ -137,4 +137,20 @@ describe("blame.utils: integrates with real Neovim windows", function()
 		local blame_cursor_pos = vim.api.nvim_win_get_cursor(blame_win_id)
 		assert.are.same({ blame_line_count, 0 }, blame_cursor_pos)
 	end)
+
+	it("sets cursor to a specific line using set_cursor_to_line", function()
+		utils.set_cursor_to_line(blame_win_id, 5)
+		local cursor_pos = vim.api.nvim_win_get_cursor(blame_win_id)
+		assert.are.same({ 5, 0 }, cursor_pos)
+
+		-- Test upper bound
+		utils.set_cursor_to_line(blame_win_id, 100)
+		cursor_pos = vim.api.nvim_win_get_cursor(blame_win_id)
+		assert.are.same({ 15, 0 }, cursor_pos) -- 15 is the line count in before_each
+
+		-- Test lower bound
+		utils.set_cursor_to_line(blame_win_id, 0)
+		cursor_pos = vim.api.nvim_win_get_cursor(blame_win_id)
+		assert.are.same({ 1, 0 }, cursor_pos)
+	end)
 end)
