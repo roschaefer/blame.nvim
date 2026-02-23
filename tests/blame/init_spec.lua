@@ -41,6 +41,11 @@ describe("blame.init", function()
 		assert.are.same({ "q", "<C-c>" }, blame.options.keys.close)
 	end)
 
+	it("has default switch_focus key of <TAB>", function()
+		blame.setup({})
+		assert.are.equal("<TAB>", blame.options.keys.switch_focus)
+	end)
+
 	it("has default close keys of <ESC>, <C-c> and q", function()
 		blame.setup({})
 		assert.are.same({ "<ESC>", "<C-c>", "q" }, blame.options.keys.close)

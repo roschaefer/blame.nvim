@@ -33,6 +33,7 @@ Navigate through the commit history:
 
 * Press `<CR>` on a blame line to view the file content at that commit.
 * Press `<BS>` to go back to the previous commit in the history.
+* Press `<TAB>` to switch focus between the blame window and the file content window.
 
 ## Configuration
 
@@ -47,12 +48,12 @@ return {
       keys = {
         navigate_forward = "<CR>",
         navigate_backward = "<BS>",
+        switch_focus = "<TAB>",
       },
     },
     cmd = "Blame",
   },
 }
-
 ```
 
 ## Development

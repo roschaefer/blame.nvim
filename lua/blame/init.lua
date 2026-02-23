@@ -11,6 +11,7 @@ M.defaults = {
 	keys = {
 		navigate_forward = "<CR>",
 		navigate_backward = "<BS>",
+		switch_focus = "<TAB>",
 		close = { "<ESC>", "<C-c>", "q" },
 	},
 }
@@ -53,11 +54,18 @@ function M.show_blame_info()
 		blame_view:navigate_backward()
 	end)
 
-	-- Keymap for closing the blame view
+	-- Keymap for switching focus
 	local popups_list = {
 		blame_view.blame_popup_instance,
 		blame_view.file_popup_instance,
 	}
+	for _, popup in pairs(popups_list) do
+		utils.add_keymap(popup, M.options.keys.switch_focus, function()
+			blame_view:switch_focus()
+		end)
+	end
+
+	-- Keymap for closing the blame view
 	for _, popup in pairs(popups_list) do
 		utils.add_keymap(popup, M.options.keys.close, function()
 			blame_view:close()

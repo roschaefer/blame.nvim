@@ -60,6 +60,7 @@ Then, run `:Lazy install` in Neovim to install the plugin.
 Unit tests are written using `luassert` and are located in `tests/`.
 **Test File Convention**: Every Lua file under `lua/` must have a corresponding test file in `tests/`. The path in `tests/` must mirror the path in `lua/`, and the filename must end in `_spec.lua`. For example, `lua/blame/init.lua` should have a corresponding test file at `tests/blame/init_spec.lua`.
 **Assertion Style**: Assertion values should be hard-coded for readability and safety (avoiding variables that might change unexpectedly).
+**Avoid Mocking**: Avoid mocking or stubbing functionality under test (e.g., Neovim API calls like `nvim_get_current_win`) if the actual API can be used directly in the test environment to verify the state.
 **Mocks, Stubs, and Spies**: Prefer using stubs, mocks, and spies from `luassert` (e.g., `stub(table, "key")`) instead of manual function overrides. Use snapshots to revert stubs and spies in `before_each` and `after_each` blocks to ensure test isolation.
 ```lua
 describe("module", function()
