@@ -132,4 +132,38 @@ describe("blame.blame_view", function()
 
 		vim.api.nvim_buf_delete(buf_id, { force = true })
 	end)
+
+	it("switches focus between blame and file popups", function()
+		local buf_id = vim.api.nvim_create_buf(false, true)
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				return "abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename file.lua\n\tline content 1\n"
+			end,
+		}
+
+		local blame_view = BlameView:new({
+			git_instance = mock_git,
+		})
+
+		blame_view:update_view(nil)
+		blame_view:mount()
+
+		local blame_win = blame_view.blame_popup_instance.winid
+		local file_win = blame_view.file_popup_instance.winid
+
+		-- Switch from blame to file
+		vim.api.nvim_set_current_win(blame_win)
+		blame_view:switch_focus()
+		assert.are.equal(file_win, vim.api.nvim_get_current_win())
+
+		-- Switch from file to blame
+		vim.api.nvim_set_current_win(file_win)
+		blame_view:switch_focus()
+		assert.are.equal(blame_win, vim.api.nvim_get_current_win())
+
+		blame_view:close()
+		vim.api.nvim_buf_delete(buf_id, { force = true })
+	end)
 end)

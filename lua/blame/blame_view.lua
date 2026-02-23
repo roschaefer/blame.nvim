@@ -213,4 +213,13 @@ function BlameView:close()
 	self.layout:unmount()
 end
 
+function BlameView:switch_focus()
+	local current_win = vim.api.nvim_get_current_win()
+	if current_win == self.blame_popup_instance.winid then
+		vim.api.nvim_set_current_win(self.file_popup_instance.winid)
+	else
+		vim.api.nvim_set_current_win(self.blame_popup_instance.winid)
+	end
+end
+
 return BlameView
