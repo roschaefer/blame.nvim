@@ -1,5 +1,13 @@
 # Changelog
 
+## [1.3.0](https://github.com/roschaefer/blame.nvim/compare/v1.2.0...v1.3.0) (2026-02-25)
+
+
+### Features
+
+* **navigation:** move cursor to commit_info.source_line ([#37](https://github.com/roschaefer/blame.nvim/issues/37)) ([9480b82](https://github.com/roschaefer/blame.nvim/commit/9480b82604157131f90c9b2e0d8a0002857690cd))
+* **navigation:** restore old cursor position ([#40](https://github.com/roschaefer/blame.nvim/issues/40)) ([a315963](https://github.com/roschaefer/blame.nvim/commit/a315963b7fb68fa593cb7b05b2f105206e0e2a54))
+
 ## [1.2.0](https://github.com/roschaefer/blame.nvim/compare/v1.1.0...v1.2.0) (2026-02-23)
 
 
