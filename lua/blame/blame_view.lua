@@ -74,12 +74,17 @@ end
 
 function BlameView:mount()
 	local current_file_win = vim.api.nvim_get_current_win()
+	local cursor_pos = vim.api.nvim_win_get_cursor(current_file_win)
+	self.breadcrumb:push({ commit_info = nil, cursor_pos = cursor_pos })
+
 	self.layout:mount()
 
 	-- Set current window to the blame popup for initial blame display
 	if self.blame_popup_instance and self.blame_popup_instance.winid then
 		vim.api.nvim_set_current_win(self.blame_popup_instance.winid)
 	end
+
+	self:update_view(nil)
 
 	utils.initialize_cursor_position(current_file_win, self.blame_popup_instance.winid)
 	utils.initialize_cursor_position(current_file_win, self.file_popup_instance.winid)
@@ -175,11 +180,6 @@ function BlameView:update_view(commit_info)
 
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.blame_popup_instance.bufnr })
 	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.file_popup_instance.bufnr })
-
-	if commit_info and commit_info.header and commit_info.header.source_line then
-		utils.set_cursor_to_line(self.blame_popup_instance.winid, commit_info.header.source_line)
-		utils.set_cursor_to_line(self.file_popup_instance.winid, commit_info.header.source_line)
-	end
 end
 
 function BlameView:navigate_forward()
@@ -194,18 +194,33 @@ function BlameView:navigate_forward()
 		return
 	end
 
-	if self.breadcrumb:push(commit_info) then
-		self:update_view(self.breadcrumb:current())
+	local current = self.breadcrumb:current()
+	if current then
+		current.cursor_pos = vim.api.nvim_win_get_cursor(0)
+	end
+
+	if self.breadcrumb:push({ commit_info = commit_info, cursor_pos = nil }) then
+		self:update_view(commit_info)
+		if commit_info and commit_info.header and commit_info.header.source_line then
+			utils.set_cursor_to_line(self.blame_popup_instance.winid, commit_info.header.source_line)
+			utils.set_cursor_to_line(self.file_popup_instance.winid, commit_info.header.source_line)
+		end
 	end
 end
 
 function BlameView:navigate_backward()
-	if #self.breadcrumb.stack == 0 then
+	if #self.breadcrumb.stack <= 1 then
 		vim.notify("blame.nvim: No more history to go back to.", vim.log.levels.INFO)
 		return
 	end
 	self.breadcrumb:pop()
-	self:update_view(self.breadcrumb:current())
+	local current = self.breadcrumb:current()
+	self:update_view(current.commit_info)
+
+	if current.cursor_pos then
+		vim.api.nvim_win_set_cursor(self.blame_popup_instance.winid, current.cursor_pos)
+		vim.api.nvim_win_set_cursor(self.file_popup_instance.winid, current.cursor_pos)
+	end
 end
 
 function BlameView:close()

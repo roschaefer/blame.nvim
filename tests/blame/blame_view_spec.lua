@@ -41,7 +41,11 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = stub({}, "get_blame_output", "abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename file.lua\n\tline content 1\nabcdef1234567890 2 2\n\tline content 2\n"),
+			get_blame_output = stub(
+				{},
+				"get_blame_output",
+				"abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename file.lua\n\tline content 1\nabcdef1234567890 2 2\n\tline content 2\n"
+			),
 		}
 
 		local blame_view = BlameView:new({
@@ -80,7 +84,11 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = stub({}, "get_blame_output", "abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename file.lua\n\tline content 1\n"),
+			get_blame_output = stub(
+				{},
+				"get_blame_output",
+				"abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename file.lua\n\tline content 1\n"
+			),
 		}
 
 		local blame_view = BlameView:new({
@@ -88,8 +96,20 @@ describe("blame.blame_view", function()
 		})
 
 		-- Pre-fill buffers with more lines
-		vim.api.nvim_buf_set_lines(blame_view.blame_popup_instance.bufnr, 0, -1, false, { "old line 1", "old line 2", "old line 3" })
-		vim.api.nvim_buf_set_lines(blame_view.file_popup_instance.bufnr, 0, -1, false, { "old line 1", "old line 2", "old line 3" })
+		vim.api.nvim_buf_set_lines(
+			blame_view.blame_popup_instance.bufnr,
+			0,
+			-1,
+			false,
+			{ "old line 1", "old line 2", "old line 3" }
+		)
+		vim.api.nvim_buf_set_lines(
+			blame_view.file_popup_instance.bufnr,
+			0,
+			-1,
+			false,
+			{ "old line 1", "old line 2", "old line 3" }
+		)
 
 		blame_view:update_view(nil)
 
@@ -105,7 +125,11 @@ describe("blame.blame_view", function()
 
 	it("mounts the layout and initializes positions", function()
 		local buf_id = vim.api.nvim_create_buf(false, true)
-		local mock_git = {}
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", ""),
+		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 
 		local blame_view_layout_mount_spy = spy.on(blame_view.layout, "mount")
@@ -116,6 +140,8 @@ describe("blame.blame_view", function()
 
 		assert.spy(blame_view_layout_mount_spy).was.called(1)
 		assert.spy(utils_initialize_cursor_position_spy).was.called(2)
+		assert.are.equal(1, #blame_view.breadcrumb.stack)
+		assert.is_nil(blame_view.breadcrumb:current().commit_info)
 
 		vim.api.nvim_buf_delete(buf_id, { force = true })
 	end)
@@ -147,7 +173,6 @@ describe("blame.blame_view", function()
 			git_instance = mock_git,
 		})
 
-		blame_view:update_view(nil)
 		blame_view:mount()
 
 		local blame_win = blame_view.blame_popup_instance.winid
@@ -189,7 +214,6 @@ describe("blame.blame_view", function()
 			git_instance = mock_git,
 		})
 
-		blame_view:update_view(nil)
 		blame_view:mount()
 
 		-- Setup some blame lines with source_line
@@ -216,7 +240,7 @@ describe("blame.blame_view", function()
 		vim.api.nvim_buf_delete(buf_id, { force = true })
 	end)
 
-	it("sets cursor to source_line when navigating backward", function()
+	it("restores cursor position when navigating backward", function()
 		local buf_id = vim.api.nvim_create_buf(false, true)
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
@@ -238,27 +262,30 @@ describe("blame.blame_view", function()
 			git_instance = mock_git,
 		})
 
-		blame_view:update_view(nil)
 		blame_view:mount()
 
 		-- Setup breadcrumb with two items
 		local item1 = {
-			header = { commit = "hash1", source_line = 10, result_line = 1 },
-			previous = { commit = "prev1", filename = "file.lua" },
+			commit_info = {
+				header = { commit = "hash1", source_line = 10, result_line = 1 },
+				previous = { commit = "prev1", filename = "file.lua" },
+			},
+			cursor_pos = { 15, 0 }, -- This is what we want to restore to
 		}
 		local item2 = {
-			header = { commit = "hash2", source_line = 20, result_line = 1 },
-			previous = { commit = "prev2", filename = "file.lua" },
+			commit_info = {
+				header = { commit = "hash2", source_line = 20, result_line = 1 },
+				previous = { commit = "prev2", filename = "file.lua" },
+			},
 		}
-		blame_view.breadcrumb:push(item1)
-		blame_view.breadcrumb:push(item2)
+		blame_view.breadcrumb.stack = { item1, item2 }
 
 		-- Execute navigate_backward (pops item2, current becomes item1)
 		blame_view:navigate_backward()
 
-		-- Verify actual cursor position
-		assert.are.same({ 10, 0 }, vim.api.nvim_win_get_cursor(blame_view.blame_popup_instance.winid))
-		assert.are.same({ 10, 0 }, vim.api.nvim_win_get_cursor(blame_view.file_popup_instance.winid))
+		-- Verify actual cursor position is restored from item1.cursor_pos, NOT from source_line
+		assert.are.same({ 15, 0 }, vim.api.nvim_win_get_cursor(blame_view.blame_popup_instance.winid))
+		assert.are.same({ 15, 0 }, vim.api.nvim_win_get_cursor(blame_view.file_popup_instance.winid))
 
 		blame_view:close()
 		vim.api.nvim_buf_delete(buf_id, { force = true })

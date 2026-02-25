@@ -11,7 +11,7 @@ describe("blame.breadcrumb", function()
 
 	it("pushes a new item", function()
 		local bc = Breadcrumb:new()
-		local item = { header = { commit = "hash1" } }
+		local item = { commit_info = { header = { commit = "hash1" } }, cursor_pos = { 1, 0 } }
 		local added = bc:push(item)
 		assert.is_true(added)
 		assert.are.same({ item }, bc.stack)
@@ -20,7 +20,7 @@ describe("blame.breadcrumb", function()
 
 	it("does not push a duplicate item", function()
 		local bc = Breadcrumb:new()
-		local item = { header = { commit = "hash1" } }
+		local item = { commit_info = { header = { commit = "hash1" } }, cursor_pos = { 1, 0 } }
 		bc:push(item)
 		local added = bc:push(item)
 		assert.is_false(added)
@@ -30,8 +30,8 @@ describe("blame.breadcrumb", function()
 
 	it("pushes multiple items", function()
 		local bc = Breadcrumb:new()
-		local item1 = { header = { commit = "hash1" } }
-		local item2 = { header = { commit = "hash2" } }
+		local item1 = { commit_info = { header = { commit = "hash1" } }, cursor_pos = { 1, 0 } }
+		local item2 = { commit_info = { header = { commit = "hash2" } }, cursor_pos = { 2, 0 } }
 		bc:push(item1)
 		bc:push(item2)
 		assert.are.same({ item1, item2 }, bc.stack)
@@ -40,8 +40,8 @@ describe("blame.breadcrumb", function()
 
 	it("pops an item", function()
 		local bc = Breadcrumb:new()
-		local item1 = { header = { commit = "hash1" } }
-		local item2 = { header = { commit = "hash2" } }
+		local item1 = { commit_info = { header = { commit = "hash1" } }, cursor_pos = { 1, 0 } }
+		local item2 = { commit_info = { header = { commit = "hash2" } }, cursor_pos = { 2, 0 } }
 		bc:push(item1)
 		bc:push(item2)
 		local popped_item = bc:pop()
@@ -60,7 +60,10 @@ describe("blame.breadcrumb", function()
 
 	it("does not push '00000000' to the stack", function()
 		local bc = Breadcrumb:new()
-		local item = { header = { commit = "0000000000000000000000000000000000000000" } }
+		local item = {
+			commit_info = { header = { commit = "0000000000000000000000000000000000000000" } },
+			cursor_pos = { 1, 0 },
+		}
 		local added = bc:push(item)
 		assert.is_false(added)
 		assert.are.same({}, bc.stack)

@@ -39,7 +39,6 @@ function M.show_blame_info()
 	if not blame_view then
 		return
 	end
-	blame_view:update_view(nil)
 
 	-- Mount the layout
 	blame_view:mount()
