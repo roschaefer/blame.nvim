@@ -102,5 +102,6 @@ Before submitting changes, ensure all Lua files pass diagnostics:
 *   `lua/blame/parser.lua`: Responsible for parsing the `git blame --line-porcelain` output.
 *   `lua/blame/breadcrumb.lua`: Implements the stack-based commit history navigation logic.
 *   `lua/blame/utils.lua`: Provides helper functions for window and cursor synchronization.
+*   `scripts/run`: Helper script to launch an isolated Neovim instance with lazy.nvim and blame.nvim activated.
 *   `tests/lua/`: Directory containing unit tests for all modules (e.g., `breadcrumb_spec.lua`, `git_spec.lua`).
 *   `.luarc.json`: Configuration file for Lua language server.

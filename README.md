@@ -58,6 +58,12 @@ return {
 
 ## Development
 
+To start Neovim with `lazy.nvim` and only this plugin activated:
+
+```bash
+./scripts/run [file...]
+```
+
 To run the tests, use the following command:
 
 ```bash

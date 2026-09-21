@@ -1,0 +1,5 @@
+#!/usr/bin/env bash
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+ROOT_DIR=$(dirname "$SCRIPT_DIR")
+
+exec nvim -u "$ROOT_DIR/tests/minit.lua" "$@"
