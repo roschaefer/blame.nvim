@@ -1,13 +1,17 @@
 #!/usr/bin/env -S nvim -l
 
-vim.env.LAZY_STDPATH = ".tests"
+local root = vim.fs.normalize(vim.fn.fnamemodify(debug.getinfo(1, "S").source:sub(2), ":p:h:h"))
+
+vim.env.LAZY_STDPATH = root .. "/.tests"
 load(vim.fn.system("curl -s https://raw.githubusercontent.com/folke/lazy.nvim/main/bootstrap.lua"))()
 
 -- Setup lazy.nvim
 require("lazy.minit").setup({
 	spec = {
+		{ "MunifTanjim/nui.nvim", lazy = true },
 		{
-			dir = vim.uv.cwd(),
+			dir = root,
+			name = "blame.nvim",
 			opts = {},
 		},
 	},

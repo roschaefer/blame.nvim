@@ -25,9 +25,10 @@ describe("blame.git", function()
 			---@cast git -nil
 			assert.are.equal(vim.fn.fnamemodify(test_file, ":p"), git.original_file)
 
-			-- Check if git_root contains the .git directory
-			local check = vim.fn.isdirectory(git.git_root .. "/.git")
-			assert.is_true(check == 1)
+			-- Check if git_root contains the .git directory or file
+			local check = vim.fn.isdirectory(git.git_root .. "/.git") == 1
+				or vim.fn.filereadable(git.git_root .. "/.git") == 1
+			assert.is_true(check)
 
 			vim.api.nvim_buf_delete(buf_id, { force = true })
 		end)
