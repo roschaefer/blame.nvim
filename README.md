@@ -4,7 +4,10 @@
 
 ## Features
 
-* **Commit History Navigation:** Navigate line-by-line through revisions of a file.
+* **Git Blame Integration:** Displays commit hash, author, date, and commit message for each line in a split popup.
+* **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
+* **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<BS>` to go backward) through revisions of a file.
+* **Custom Keymaps:** Configurable keybindings for navigation, switching focus, and closing.
 
 ## Installation
 
@@ -17,10 +20,10 @@ Install `blame.nvim` using your favorite plugin manager.
 return {
   {
     "roschaefer/blame.nvim",
+    dependencies = { "MunifTanjim/nui.nvim" },
     cmd = "Blame",
   },
 }
-
 ```
 
 ## Usage
@@ -34,6 +37,7 @@ Navigate through the commit history:
 * Press `<CR>` on a blame line to view the file content at that commit.
 * Press `<BS>` to go back to the previous commit in the history.
 * Press `<TAB>` to switch focus between the blame window and the file content window.
+* Press `<ESC>`, `<C-c>`, or `q` to close the blame view.
 
 ## Configuration
 
@@ -44,11 +48,13 @@ You can override the default configuration:
 return {
   {
     "roschaefer/blame.nvim",
+    dependencies = { "MunifTanjim/nui.nvim" },
     opts = {
       keys = {
         navigate_forward = "<CR>",
         navigate_backward = "<BS>",
         switch_focus = "<TAB>",
+        close = { "<ESC>", "<C-c>", "q" },
       },
     },
     cmd = "Blame",
@@ -64,8 +70,16 @@ To start Neovim with `lazy.nvim` and only this plugin activated:
 ./scripts/run [file...]
 ```
 
-To run the tests, use the following command:
+To run the unit tests:
 
 ```bash
 ./scripts/test
 ```
+
+To run diagnostics:
+
+```bash
+./scripts/llscheck
+```
+
+Code formatting is managed using [stylua](https://github.com/JohnnyMorganz/StyLua).
