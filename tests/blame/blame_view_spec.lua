@@ -371,4 +371,31 @@ describe("blame.blame_view", function()
 
 		blame_view:close()
 	end)
+
+	it("restores the cursor column when navigating back", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				return blame_output_with_lines(50)
+			end,
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		blame_view:mount()
+		blame_view.blame_lines[30] = {
+			header = { commit = "hash1", source_line = 42, result_line = 30 },
+			previous = { commit = "prev_hash", filename = "file.lua" },
+		}
+		vim.api.nvim_set_current_win(blame_view.file_winid)
+		vim.api.nvim_win_set_cursor(blame_view.file_winid, { 30, 5 })
+
+		blame_view:navigate_forward()
+		blame_view:navigate_backward()
+
+		assert.are.same({ 30, 5 }, vim.api.nvim_win_get_cursor(blame_view.file_winid))
+		-- The blame line is empty, because line 30 belongs to the same commit as line 1
+		assert.are.same({ 30, 0 }, vim.api.nvim_win_get_cursor(blame_view.blame_winid))
+
+		blame_view:close()
+	end)
 end)

@@ -200,11 +200,15 @@ function BlameView:enforce_view_options()
 	end
 end
 
---- Moves the cursor in both windows to the same line and re-aligns their scroll views.
---- @param line_num number
-function BlameView:set_cursor(line_num)
-	utils.set_cursor_to_line(self.blame_winid, line_num)
-	utils.set_cursor_to_line(self.file_winid, line_num)
+--- Moves the cursor in both windows to the same position and re-aligns their scroll views.
+--- @param cursor_pos table {row, col}
+function BlameView:set_cursor(cursor_pos)
+	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
+		utils.set_cursor_to_line(winid, cursor_pos[1])
+		-- Neovim moves a column beyond the end of the line to the last character
+		local row = vim.api.nvim_win_get_cursor(winid)[1]
+		vim.api.nvim_win_set_cursor(winid, { row, cursor_pos[2] })
+	end
 	vim.api.nvim_win_call(self.file_winid, function()
 		vim.cmd("syncbind")
 	end)
@@ -230,7 +234,7 @@ function BlameView:navigate_forward()
 	if self.breadcrumb:push({ commit_info = commit_info, cursor_pos = nil }) then
 		self:update_view(commit_info)
 		if commit_info and commit_info.header and commit_info.header.source_line then
-			self:set_cursor(commit_info.header.source_line)
+			self:set_cursor({ commit_info.header.source_line, 0 })
 		end
 	end
 end
@@ -245,7 +249,7 @@ function BlameView:navigate_backward()
 	self:update_view(current.commit_info)
 
 	if current.cursor_pos then
-		self:set_cursor(current.cursor_pos[1])
+		self:set_cursor(current.cursor_pos)
 	end
 end
 
