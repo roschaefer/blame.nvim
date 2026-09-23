@@ -40,14 +40,16 @@ end
 --- @param bufnr number
 --- @param filetype string|nil
 local function highlight_syntax(bufnr, filetype)
-	vim.treesitter.stop(bufnr)
+	-- Neovim 0.10 fails to stop the highlighter if 'syntax_on' is set without the `syntaxset` autocmd group
+	pcall(vim.treesitter.stop, bufnr)
 	vim.bo[bufnr].syntax = ""
 	if not filetype then
 		return
 	end
 
-	local lang = vim.treesitter.language.get_lang(filetype)
-	if not (lang and pcall(vim.treesitter.start, bufnr, lang)) then
+	-- Neovim 0.10 only returns explicitly registered languages, so fall back to the filetype like `vim.treesitter.start()`
+	local lang = vim.treesitter.language.get_lang(filetype) or filetype
+	if not pcall(vim.treesitter.start, bufnr, lang) then
 		-- No tree-sitter parser is installed for this language
 		vim.bo[bufnr].syntax = filetype
 	end
