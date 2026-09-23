@@ -61,6 +61,7 @@ function BlameView:new(dependencies)
 		blame_winid = nil,
 		file_winid = nil,
 		tabpage = nil,
+		previous_tabpage = nil,
 		augroup = nil,
 		ns_id = vim.api.nvim_create_namespace("blame"),
 		breadcrumb = Breadcrumb:new(),
@@ -77,6 +78,7 @@ function BlameView:mount()
 	self.breadcrumb:push({ commit_info = nil, cursor_pos = cursor_pos })
 
 	-- A new tab page leaves the user's window layout untouched
+	self.previous_tabpage = vim.api.nvim_get_current_tabpage()
 	vim.cmd("tab sbuffer " .. self.file_bufnr)
 	self.tabpage = vim.api.nvim_get_current_tabpage()
 	self.file_winid = vim.api.nvim_get_current_win()
@@ -259,6 +261,10 @@ function BlameView:close()
 			vim.cmd("tabnew")
 		end
 		vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(self.tabpage))
+		-- `:tabclose` moves to the tab page on the right, not to the one the view was opened from
+		if self.previous_tabpage and vim.api.nvim_tabpage_is_valid(self.previous_tabpage) then
+			vim.api.nvim_set_current_tabpage(self.previous_tabpage)
+		end
 	end
 	self.tabpage = nil
 end

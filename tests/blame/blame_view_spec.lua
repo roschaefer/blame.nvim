@@ -252,6 +252,29 @@ describe("blame.blame_view", function()
 		assert.is_false(vim.api.nvim_buf_is_valid(blame_view.file_bufnr))
 	end)
 
+	it("returns to the tab page it was opened from when there are more tab pages", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				return blame_output_with_lines(3)
+			end,
+		}
+		local original_tabpage = vim.api.nvim_get_current_tabpage()
+		vim.cmd("tabnew")
+		local other_tabpage = vim.api.nvim_get_current_tabpage()
+		vim.api.nvim_set_current_tabpage(original_tabpage)
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		blame_view:mount()
+
+		blame_view:close()
+
+		assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+		assert.are.same({ original_tabpage, other_tabpage }, vim.api.nvim_list_tabpages())
+
+		vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(other_tabpage))
+	end)
+
 	it("closes the whole view when one of its windows is closed", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
