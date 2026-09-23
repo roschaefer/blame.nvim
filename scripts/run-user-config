@@ -1,0 +1,15 @@
+#!/usr/bin/env bash
+# Starts your own Neovim configuration with this working copy of blame.nvim.
+#
+# lazy.nvim picks up `.lazy.lua` from the current working directory, so Neovim
+# changes into the repository root before your config is loaded. `.lazy.lua`
+# changes back to `BLAME_NVIM_CWD` as soon as lazy.nvim has loaded it.
+SCRIPT_DIR=$(dirname "$(realpath "$0")")
+ROOT_DIR=$(dirname "$SCRIPT_DIR")
+
+export BLAME_NVIM_ROOT="$ROOT_DIR"
+export BLAME_NVIM_CWD="$PWD"
+
+exec nvim \
+	--cmd 'lua vim.fn.chdir(vim.env.BLAME_NVIM_ROOT)' \
+	"$@"

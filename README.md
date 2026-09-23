@@ -70,6 +70,18 @@ To start Neovim with `lazy.nvim` and only this plugin activated:
 ./scripts/run [file...]
 ```
 
+To start your own Neovim configuration with this working copy of the plugin
+(requires `lazy.nvim`, your `~/.config/nvim` stays untouched):
+
+```bash
+./scripts/run-user-config [file...]
+```
+
+This works through the project-local [`.lazy.lua`](.lazy.lua) spec, which
+lazy.nvim merges into your configuration whenever Neovim starts inside this
+repository. The first time, Neovim asks you to trust `.lazy.lua`: choose
+`(v)iew` and run `:trust`.
+
 To run the unit tests:
 
 ```bash
