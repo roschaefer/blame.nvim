@@ -11,7 +11,7 @@
 
 ## Installation
 
-Install `blame.nvim` using your favorite plugin manager.
+Requires Neovim >= 0.10 and `git`. Install `blame.nvim` using your favorite plugin manager.
 
 ### [lazy.nvim](https://github.com/folke/lazy.nvim)
 
