@@ -47,15 +47,15 @@ function M.set_cursor_to_line(win, line_num)
 	vim.api.nvim_win_set_cursor(win, { line_num, 0 })
 end
 
---- Adds a keymap for one or many keys to a popup.
---- @param popup table The nui.popup instance.
+--- Adds a normal mode keymap for one or many keys to a buffer.
+--- @param bufnr number The buffer handle.
 --- @param keys string|table The key or list of keys to map.
 --- @param handler function The function to execute.
-function M.add_keymap(popup, keys, handler)
+function M.add_keymap(bufnr, keys, handler)
 	local key_list = type(keys) == "table" and keys or { keys }
 	for _, key in ipairs(key_list) do
-		popup:map("n", key, handler, {
-			noremap = true,
+		vim.keymap.set("n", key, handler, {
+			buffer = bufnr,
 			silent = true,
 		})
 	end

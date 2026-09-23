@@ -19,7 +19,6 @@ if vim.env.BLAME_NVIM_CWD then
 end
 
 return {
-	{ "MunifTanjim/nui.nvim", lazy = true },
 	{
 		"roschaefer/blame.nvim",
 		dir = root,

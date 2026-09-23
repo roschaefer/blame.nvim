@@ -153,4 +153,15 @@ describe("blame.utils: integrates with real Neovim windows", function()
 		cursor_pos = vim.api.nvim_win_get_cursor(blame_win_id)
 		assert.are.same({ 1, 0 }, cursor_pos)
 	end)
+
+	it("adds a buffer-local normal mode keymap for each key", function()
+		local handler = function() end
+
+		utils.add_keymap(blame_buf_id, { "q", "<C-c>" }, handler)
+
+		assert.are.equal(handler, vim.fn.maparg("q", "n", false, true).callback)
+		assert.are.equal(handler, vim.fn.maparg("<C-c>", "n", false, true).callback)
+		assert.are.equal(1, vim.fn.maparg("q", "n", false, true).buffer)
+		assert.are.same({}, vim.api.nvim_buf_get_keymap(original_buf_id, "n"))
+	end)
 end)

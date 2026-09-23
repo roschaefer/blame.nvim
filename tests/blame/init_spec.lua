@@ -22,7 +22,7 @@ describe("blame.init", function()
 
 		local commands = vim.api.nvim_get_commands({})
 		assert.is_not_nil(commands["Blame"])
-		assert.are.equal("Show git blame information and file content in a popup.", commands["Blame"].definition)
+		assert.are.equal("Show git blame information and file content side by side.", commands["Blame"].definition)
 	end)
 
 	it("applies user options during setup", function()
@@ -39,11 +39,6 @@ describe("blame.init", function()
 		assert.are.equal("L", blame.options.keys.navigate_forward)
 		assert.are.equal("H", blame.options.keys.navigate_backward)
 		assert.are.same({ "q", "<C-c>" }, blame.options.keys.close)
-	end)
-
-	it("has default switch_focus key of <TAB>", function()
-		blame.setup({})
-		assert.are.equal("<TAB>", blame.options.keys.switch_focus)
 	end)
 
 	it("has default close keys of <ESC>, <C-c> and q", function()

@@ -1,72 +1,54 @@
 local BlameView = {}
 BlameView.__index = BlameView
 
-local Popup = require("nui.popup")
-local Layout = require("nui.layout")
-
 local parser = require("blame.parser")
-local NuiLine = require("nui.line")
-local NuiText = require("nui.text")
 local Breadcrumb = require("blame.breadcrumb")
 local utils = require("blame.utils")
 
+--- Creates a read-only scratch buffer that is wiped as soon as it is no longer displayed.
+--- @return number bufnr
+local function create_scratch_buffer()
+	local bufnr = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = bufnr })
+	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
+	return bufnr
+end
+
+--- Sets the title of a window, escaping `%` for 'winbar'.
+--- The title is never empty, because windows without a winbar would be misaligned by one row.
+--- @param winid number|nil
+--- @param title string
+local function set_title(winid, title)
+	if winid and vim.api.nvim_win_is_valid(winid) then
+		local winbar = " " .. title:gsub("%%", "%%%%")
+		vim.api.nvim_set_option_value("winbar", winbar, { scope = "local", win = winid })
+	end
+end
+
+--- Writes lines into a read-only buffer.
+--- @param bufnr number
+--- @param lines string[]
+local function set_lines(bufnr, lines)
+	vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
+end
+
 function BlameView:new(dependencies)
-	local git_instance = dependencies.git_instance
-
-	-- Create blame_popup for blame information
-	local blame_popup_instance = Popup({
-		border = {
-			style = "rounded",
-			text = {
-				top = "",
-			},
-		},
-		focusable = true,
-		win_options = {
-			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
-			number = false,
-			relativenumber = false,
-			cursorline = true,
-			wrap = false,
-			winfixwidth = true,
-		},
-	})
-
-	-- Create file_popup for file content
-	local file_popup_instance = Popup({
-		border = {
-			style = "rounded",
-			text = {
-				top = "",
-			},
-		},
-		focusable = true,
-		win_options = {
-			winhighlight = "Normal:Normal,FloatBorder:FloatBorder",
-			number = true,
-			relativenumber = true,
-			cursorline = true,
-			wrap = false,
-		},
-	})
-
 	local instance = {
-		git_instance = git_instance,
-		blame_popup_instance = blame_popup_instance,
-		file_popup_instance = file_popup_instance,
+		git_instance = dependencies.git_instance,
+		blame_bufnr = create_scratch_buffer(),
+		file_bufnr = create_scratch_buffer(),
+		blame_winid = nil,
+		file_winid = nil,
+		tabpage = nil,
+		augroup = nil,
 		ns_id = vim.api.nvim_create_namespace("blame"),
 		breadcrumb = Breadcrumb:new(),
 		blame_lines = {},
 	}
 
-	-- Define the layout: blame_popup on left, file_popup on right
-	instance.layout = Layout(
-		{ relative = "editor", position = "50%", size = "90%" }, -- Options for the main layout
-		Layout.Box({
-			Layout.Box(blame_popup_instance, { size = "25%" }), -- Pass popup directly as component
-			Layout.Box(file_popup_instance, { size = "75%" }), -- Pass popup directly as component
-		}, { dir = "row" })
-	)
+	vim.api.nvim_set_option_value("filetype", "blame", { buf = instance.blame_bufnr })
 
 	setmetatable(instance, BlameView)
 	return instance
@@ -77,35 +59,51 @@ function BlameView:mount()
 	local cursor_pos = vim.api.nvim_win_get_cursor(current_file_win)
 	self.breadcrumb:push({ commit_info = nil, cursor_pos = cursor_pos })
 
-	self.layout:mount()
+	-- A new tab page leaves the user's window layout untouched
+	vim.cmd("tab sbuffer " .. self.file_bufnr)
+	self.tabpage = vim.api.nvim_get_current_tabpage()
+	self.file_winid = vim.api.nvim_get_current_win()
+	self.blame_winid = vim.api.nvim_open_win(self.blame_bufnr, true, {
+		split = "left",
+		win = self.file_winid,
+		width = math.floor(vim.o.columns * 0.25),
+	})
 
-	-- Set current window to the blame popup for initial blame display
-	if self.blame_popup_instance and self.blame_popup_instance.winid then
-		vim.api.nvim_set_current_win(self.blame_popup_instance.winid)
+	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
+		local wo = vim.wo[winid][0]
+		wo.cursorline = true
+		wo.wrap = false
+		wo.foldenable = false
+		-- Keeps e.g. <C-o> from replacing the blame or file buffer
+		wo.winfixbuf = true
 	end
+	local blame_wo = vim.wo[self.blame_winid][0]
+	blame_wo.number = false
+	blame_wo.relativenumber = false
+	blame_wo.signcolumn = "no"
+	blame_wo.foldcolumn = "0"
+	blame_wo.list = false
+	blame_wo.spell = false
+	blame_wo.winfixwidth = true
+	vim.wo[self.file_winid][0].number = true
 
 	self:update_view(nil)
 
-	utils.initialize_cursor_position(current_file_win, self.blame_popup_instance.winid)
-	utils.initialize_cursor_position(current_file_win, self.file_popup_instance.winid)
+	utils.initialize_cursor_position(current_file_win, self.blame_winid)
+	utils.initialize_cursor_position(current_file_win, self.file_winid)
 
-	local popups_list = {
-		self.blame_popup_instance,
-		self.file_popup_instance,
-	}
-	for _, popup in pairs(popups_list) do
-		popup:on("BufLeave", function()
+	-- Closing one of the two windows (e.g. with `:q`) closes the whole view
+	self.augroup = vim.api.nvim_create_augroup("blame_view_" .. self.tabpage, { clear = true })
+	vim.api.nvim_create_autocmd("WinClosed", {
+		group = self.augroup,
+		pattern = { tostring(self.blame_winid), tostring(self.file_winid) },
+		once = true,
+		callback = function()
 			vim.schedule(function()
-				local curr_bufnr = vim.api.nvim_get_current_buf()
-				for _, p in pairs(popups_list) do
-					if p.bufnr == curr_bufnr then
-						return
-					end
-				end
-				self.layout:unmount()
+				self:close()
 			end)
-		end)
-	end
+		end,
+	})
 end
 
 function BlameView:update_view(commit_info)
@@ -116,8 +114,8 @@ function BlameView:update_view(commit_info)
 		return
 	end
 
-	local blame_title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8)) or ""
-	self.blame_popup_instance.border:set_text("top", blame_title)
+	local blame_title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8)) or "HEAD"
+	set_title(self.blame_winid, blame_title)
 
 	local file_title
 	if commit_info and commit_info.previous and commit_info.previous.filename then
@@ -125,46 +123,39 @@ function BlameView:update_view(commit_info)
 	else
 		file_title = self.git_instance.original_file:sub(#self.git_instance.git_root + 2)
 	end
-	self.file_popup_instance.border:set_text("top", file_title)
+	set_title(self.file_winid, file_title)
 
 	local blame_result = parser.parse_blame_output(blame_result_stdout)
 	self.blame_lines = blame_result.lines
 
-	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.blame_popup_instance.bufnr })
-	vim.api.nvim_set_option_value("modifiable", true, { scope = "local", buf = self.file_popup_instance.bufnr })
-
+	local blame_content = {}
+	local file_content = {}
+	local commit_highlights = {}
 	local previous_commit = ""
 	for i, line in ipairs(self.blame_lines) do
-		-- Blame Popup Rendering
-		local blame_info_str = string.format("%s %s (%s)", line.header.commit, line.author, line.date)
+		-- Only the first line of a block of lines from the same commit is annotated
 		if line.header.commit ~= previous_commit then
-			local hex_color = "#" .. line.header.commit:sub(1, 6)
 			local highlight_group = "GitBlameCommit_" .. line.header.commit
-			vim.cmd("highlight " .. highlight_group .. " guifg=" .. hex_color)
-
-			local commit_text = NuiText(line.header.commit:sub(1, 8), highlight_group)
-			local author_and_date_text = NuiText(" " .. line.author .. " (" .. line.date .. ")")
-
-			local blame_nui_line = NuiLine({
-				commit_text,
-				author_and_date_text,
-			})
-
-			blame_nui_line:render(self.blame_popup_instance.bufnr, self.ns_id, i)
+			vim.api.nvim_set_hl(0, highlight_group, { fg = "#" .. line.header.commit:sub(1, 6) })
+			commit_highlights[i] = highlight_group
+			blame_content[i] = string.format("%s %s (%s)", line.header.commit:sub(1, 8), line.author, line.date)
 			previous_commit = line.header.commit
 		else
-			local blame_nui_line = NuiLine({ NuiText(string.rep(" ", #blame_info_str)) })
-			blame_nui_line:render(self.blame_popup_instance.bufnr, self.ns_id, i)
+			blame_content[i] = ""
 		end
-
-		-- File Popup Rendering
-		local file_nui_line = NuiLine({ NuiText(line.line_content) })
-		file_nui_line:render(self.file_popup_instance.bufnr, self.ns_id, i)
+		file_content[i] = line.line_content
 	end
 
-	-- Clear remaining lines in both buffers
-	vim.api.nvim_buf_set_lines(self.blame_popup_instance.bufnr, #self.blame_lines, -1, false, {})
-	vim.api.nvim_buf_set_lines(self.file_popup_instance.bufnr, #self.blame_lines, -1, false, {})
+	set_lines(self.blame_bufnr, blame_content)
+	set_lines(self.file_bufnr, file_content)
+
+	vim.api.nvim_buf_clear_namespace(self.blame_bufnr, self.ns_id, 0, -1)
+	for i, highlight_group in pairs(commit_highlights) do
+		vim.api.nvim_buf_set_extmark(self.blame_bufnr, self.ns_id, i - 1, 0, {
+			end_col = 8,
+			hl_group = highlight_group,
+		})
+	end
 
 	-- Set filetype for highlighting
 	local filetype
@@ -175,11 +166,18 @@ function BlameView:update_view(commit_info)
 	end
 
 	if filetype then
-		vim.api.nvim_set_option_value("filetype", filetype, { scope = "local", buf = self.file_popup_instance.bufnr })
+		vim.api.nvim_set_option_value("filetype", filetype, { buf = self.file_bufnr })
 	end
+end
 
-	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.blame_popup_instance.bufnr })
-	vim.api.nvim_set_option_value("modifiable", false, { scope = "local", buf = self.file_popup_instance.bufnr })
+--- Moves the cursor in both windows to the same line and re-aligns their scroll views.
+--- @param line_num number
+function BlameView:set_cursor(line_num)
+	utils.set_cursor_to_line(self.blame_winid, line_num)
+	utils.set_cursor_to_line(self.file_winid, line_num)
+	vim.api.nvim_win_call(self.file_winid, function()
+		vim.cmd("syncbind")
+	end)
 end
 
 function BlameView:navigate_forward()
@@ -202,8 +200,7 @@ function BlameView:navigate_forward()
 	if self.breadcrumb:push({ commit_info = commit_info, cursor_pos = nil }) then
 		self:update_view(commit_info)
 		if commit_info and commit_info.header and commit_info.header.source_line then
-			utils.set_cursor_to_line(self.blame_popup_instance.winid, commit_info.header.source_line)
-			utils.set_cursor_to_line(self.file_popup_instance.winid, commit_info.header.source_line)
+			self:set_cursor(commit_info.header.source_line)
 		end
 	end
 end
@@ -218,22 +215,24 @@ function BlameView:navigate_backward()
 	self:update_view(current.commit_info)
 
 	if current.cursor_pos then
-		vim.api.nvim_win_set_cursor(self.blame_popup_instance.winid, current.cursor_pos)
-		vim.api.nvim_win_set_cursor(self.file_popup_instance.winid, current.cursor_pos)
+		self:set_cursor(current.cursor_pos[1])
 	end
 end
 
 function BlameView:close()
-	self.layout:unmount()
-end
-
-function BlameView:switch_focus()
-	local current_win = vim.api.nvim_get_current_win()
-	if current_win == self.blame_popup_instance.winid then
-		vim.api.nvim_set_current_win(self.file_popup_instance.winid)
-	else
-		vim.api.nvim_set_current_win(self.blame_popup_instance.winid)
+	if self.augroup then
+		vim.api.nvim_del_augroup_by_id(self.augroup)
+		self.augroup = nil
 	end
+
+	if self.tabpage and vim.api.nvim_tabpage_is_valid(self.tabpage) then
+		if #vim.api.nvim_list_tabpages() == 1 then
+			-- The last tab page cannot be closed, so open an empty one to fall back to
+			vim.cmd("tabnew")
+		end
+		vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(self.tabpage))
+	end
+	self.tabpage = nil
 end
 
 return BlameView

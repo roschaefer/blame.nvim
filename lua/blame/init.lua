@@ -11,7 +11,6 @@ M.defaults = {
 	keys = {
 		navigate_forward = "<CR>",
 		navigate_backward = "<BS>",
-		switch_focus = "<TAB>",
 		close = { "<ESC>", "<C-c>", "q" },
 	},
 }
@@ -20,11 +19,11 @@ M.defaults = {
 function M.setup(opts)
 	M.options = vim.tbl_deep_extend("force", {}, M.defaults, opts or {})
 	vim.api.nvim_create_user_command("Blame", M.show_blame_info, {
-		desc = "Show git blame information and file content in a popup.",
+		desc = "Show git blame information and file content side by side.",
 	})
 end
 
--- Function to show blame info in a nui.popup
+-- Function to show blame info next to the file content in a new tab page
 function M.show_blame_info()
 	local current_file_buf = vim.api.nvim_get_current_buf()
 
@@ -44,29 +43,18 @@ function M.show_blame_info()
 	blame_view:mount()
 
 	-- Keymap for breadcrumb navigation (forward)
-	utils.add_keymap(blame_view.blame_popup_instance, M.options.keys.navigate_forward, function()
+	utils.add_keymap(blame_view.blame_bufnr, M.options.keys.navigate_forward, function()
 		blame_view:navigate_forward()
 	end)
 
 	-- Keymap for breadcrumb navigation (backward)
-	utils.add_keymap(blame_view.blame_popup_instance, M.options.keys.navigate_backward, function()
+	utils.add_keymap(blame_view.blame_bufnr, M.options.keys.navigate_backward, function()
 		blame_view:navigate_backward()
 	end)
 
-	-- Keymap for switching focus
-	local popups_list = {
-		blame_view.blame_popup_instance,
-		blame_view.file_popup_instance,
-	}
-	for _, popup in pairs(popups_list) do
-		utils.add_keymap(popup, M.options.keys.switch_focus, function()
-			blame_view:switch_focus()
-		end)
-	end
-
 	-- Keymap for closing the blame view
-	for _, popup in pairs(popups_list) do
-		utils.add_keymap(popup, M.options.keys.close, function()
+	for _, bufnr in ipairs({ blame_view.blame_bufnr, blame_view.file_bufnr }) do
+		utils.add_keymap(bufnr, M.options.keys.close, function()
 			blame_view:close()
 		end)
 	end

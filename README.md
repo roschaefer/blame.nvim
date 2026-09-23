@@ -4,10 +4,10 @@
 
 ## Features
 
-* **Git Blame Integration:** Displays commit hash, author, date, and commit message for each line in a split popup.
+* **Git Blame Integration:** Displays commit hash, author, date, and commit message for each line next to the file content.
 * **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
 * **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<BS>` to go backward) through revisions of a file.
-* **Custom Keymaps:** Configurable keybindings for navigation, switching focus, and closing.
+* **Custom Keymaps:** Configurable keybindings for navigation and closing.
 
 ## Installation
 
@@ -20,7 +20,6 @@ Install `blame.nvim` using your favorite plugin manager.
 return {
   {
     "roschaefer/blame.nvim",
-    dependencies = { "MunifTanjim/nui.nvim" },
     cmd = "Blame",
   },
 }
@@ -30,14 +29,16 @@ return {
 
 1. Open a file in a Git repository.
 2. Run the command `:Blame`.
-3. A popup window will appear, showing the blame information for the current file.
+3. A new tab page opens with the blame information on the left and the file content on the right. Both windows scroll together.
 
 Navigate through the commit history:
 
 * Press `<CR>` on a blame line to view the file content at that commit.
 * Press `<BS>` to go back to the previous commit in the history.
-* Press `<TAB>` to switch focus between the blame window and the file content window.
-* Press `<ESC>`, `<C-c>`, or `q` to close the blame view.
+* Switch between the blame window and the file content window with the usual window commands, e.g. `<C-w>h` and `<C-w>l`.
+* Press `<ESC>`, `<C-c>`, or `q` to close the blame view. Closing one of its windows (e.g. `:q`) closes the whole view.
+
+Both buffers are read-only, but you can select and yank text as usual, e.g. `yiw` on a commit hash.
 
 ## Configuration
 
@@ -48,12 +49,10 @@ You can override the default configuration:
 return {
   {
     "roschaefer/blame.nvim",
-    dependencies = { "MunifTanjim/nui.nvim" },
     opts = {
       keys = {
         navigate_forward = "<CR>",
         navigate_backward = "<BS>",
-        switch_focus = "<TAB>",
         close = { "<ESC>", "<C-c>", "q" },
       },
     },

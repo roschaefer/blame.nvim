@@ -2,7 +2,7 @@
 
 ## Project Overview
 
-`blame.nvim` is a Neovim plugin written in Lua that aims to enhance code review and understanding by displaying Git blame information and file content in a popup window with a split layout. Key features include:
+`blame.nvim` is a Neovim plugin written in Lua that aims to enhance code review and understanding by displaying Git blame information and file content side by side in a new tab page. Key features include:
 
 *   **Git Blame Integration:** Parses `git blame` output to show commit, author, and date for each line.
 *   **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
@@ -17,7 +17,7 @@
 *   **Module Structure:** Code is organized into modules under the `lua/blame/` directory.
 *   **Formatting:** All Lua files are formatted using `stylua`.
 *   **Diagnostics:** Lua Language Server diagnostics are checked using `scripts/llscheck` (based on [llscheck](https://github.com/jeffzi/llscheck)). All code must be free of diagnostic errors.
-*   **UI Library:** Utilizes `nui.nvim` for creating interactive popups and managing layouts.
+*   **UI:** Uses plain Neovim splits in a dedicated tab page (no UI library), so standard window commands, jumps and yanking keep working.
 *   **Object-Oriented Style:** Components like the breadcrumb navigation employ an object-oriented approach in Lua, using metatables (`__index`) for method dispatch on instances.
 *   **Dependency Injection:** To make dependency injection in the constructor more obvious, if a class has dependencies (e.g. to-be-mocked modules), they should be passed as the first argument to the constructor (e.g. `new`) and named `dependencies`. It is always a table which can contain the to-be-mocked modules. If there are no such dependencies, do not add a `dependencies` parameter. If a module needs to be mocked in a test, it is a strong signal to refactor the code to use this dependency injection pattern.
 *   **Testing Framework:** Unit tests are written using `luassert` and are located in `tests/lua/`.

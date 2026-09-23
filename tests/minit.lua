@@ -8,7 +8,6 @@ load(vim.fn.system("curl -s https://raw.githubusercontent.com/folke/lazy.nvim/ma
 -- Setup lazy.nvim
 require("lazy.minit").setup({
 	spec = {
-		{ "MunifTanjim/nui.nvim", lazy = true },
 		{
 			dir = root,
 			name = "blame.nvim",

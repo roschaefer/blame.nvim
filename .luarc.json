@@ -19,8 +19,7 @@
     "library": [
       "$VIMRUNTIME",
       "${3rd}/busted/library",
-      "${3rd}/luassert/library",
-      ".tests/data/nvim/lazy/nui.nvim/lua"
+      "${3rd}/luassert/library"
     ]
   },
   "files": {
