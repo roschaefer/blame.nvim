@@ -10,6 +10,14 @@ local root = vim.fs.root(vim.uv.cwd(), ".lazy.lua")
 -- it, so write the lockfile of this session somewhere else.
 require("lazy.core.config").options.lockfile = root .. "/.tests/lazy-lock.json"
 
+-- `scripts/run-user-config` starts Neovim in the repository root so lazy.nvim
+-- finds this file. Change back right away, before Neovim reads relative paths
+-- like `-q {errorfile}`, and only once, so a later spec reload keeps `:cd`.
+if vim.env.BLAME_NVIM_CWD then
+	vim.fn.chdir(vim.env.BLAME_NVIM_CWD)
+	vim.env.BLAME_NVIM_CWD = nil
+end
+
 return {
 	{ "MunifTanjim/nui.nvim", lazy = true },
 	{
