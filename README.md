@@ -62,6 +62,20 @@ return {
 }
 ```
 
+### Blame window
+
+The blame window has the filetype `blame`. You can customize it in `after/ftplugin/blame.lua`, the same way as any other filetype:
+
+```lua
+-- after/ftplugin/blame.lua
+vim.opt_local.number = true
+vim.opt_local.cursorline = false
+```
+
+The view always sets these options in both windows, because it needs them to keep the lines of both windows aligned: `scrollbind`, `cursorbind`, `nowrap`, `nofoldenable` and `winfixbuf`.
+
+The file content window has no filetype. It is highlighted with tree-sitter, or with regex syntax highlighting if no parser is installed. Your ftplugins, LSP clients and other filetype plugins do not run there.
+
 ## Development
 
 To start Neovim with `lazy.nvim` and only this plugin activated:
