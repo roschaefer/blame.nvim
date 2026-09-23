@@ -275,6 +275,55 @@ describe("blame.blame_view", function()
 		vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(other_tabpage))
 	end)
 
+	it("returns to the tab page it was opened from when the user closes the tab page of the view", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				return blame_output_with_lines(3)
+			end,
+		}
+		local original_tabpage = vim.api.nvim_get_current_tabpage()
+		vim.cmd("tabnew")
+		local other_tabpage = vim.api.nvim_get_current_tabpage()
+		vim.api.nvim_set_current_tabpage(original_tabpage)
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		blame_view:mount()
+
+		vim.cmd("tabclose")
+		vim.wait(100, function()
+			return vim.api.nvim_get_current_tabpage() == original_tabpage
+		end)
+
+		assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+
+		vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(other_tabpage))
+	end)
+
+	it("stays on the current tab page when the tab page of the view is closed from another one", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				return blame_output_with_lines(3)
+			end,
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		blame_view:mount()
+		local tabpage = blame_view.tabpage
+		vim.cmd("tabnew")
+		local other_tabpage = vim.api.nvim_get_current_tabpage()
+
+		vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(tabpage))
+		vim.wait(100, function()
+			return false
+		end)
+
+		assert.are.equal(other_tabpage, vim.api.nvim_get_current_tabpage())
+
+		vim.cmd("tabclose")
+	end)
+
 	it("closes the whole view when one of its windows is closed", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",

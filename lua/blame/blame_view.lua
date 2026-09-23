@@ -116,8 +116,10 @@ function BlameView:mount()
 		pattern = { tostring(self.blame_winid), tostring(self.file_winid) },
 		once = true,
 		callback = function()
+			-- Checked right away, because Neovim switches to another tab page before the scheduled close
+			local closed_in_view = vim.api.nvim_get_current_tabpage() == self.tabpage
 			vim.schedule(function()
-				self:close()
+				self:close(closed_in_view)
 			end)
 		end,
 	})
@@ -255,7 +257,14 @@ function BlameView:navigate_backward()
 	end
 end
 
-function BlameView:close()
+--- Closes the view and returns to the tab page it was opened from.
+--- @param return_to_previous_tabpage boolean|nil Defaults to whether the view is the current tab page,
+--- so closing the view from another tab page does not switch tab pages.
+function BlameView:close(return_to_previous_tabpage)
+	if return_to_previous_tabpage == nil then
+		return_to_previous_tabpage = vim.api.nvim_get_current_tabpage() == self.tabpage
+	end
+
 	if self.augroup then
 		vim.api.nvim_del_augroup_by_id(self.augroup)
 		self.augroup = nil
@@ -267,12 +276,17 @@ function BlameView:close()
 			vim.cmd("tabnew")
 		end
 		vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(self.tabpage))
-		-- `:tabclose` moves to the tab page on the right, not to the one the view was opened from
-		if self.previous_tabpage and vim.api.nvim_tabpage_is_valid(self.previous_tabpage) then
-			vim.api.nvim_set_current_tabpage(self.previous_tabpage)
-		end
 	end
 	self.tabpage = nil
+
+	-- `:tabclose` moves to the tab page on the right, not to the one the view was opened from
+	if
+		return_to_previous_tabpage
+		and self.previous_tabpage
+		and vim.api.nvim_tabpage_is_valid(self.previous_tabpage)
+	then
+		vim.api.nvim_set_current_tabpage(self.previous_tabpage)
+	end
 end
 
 return BlameView
