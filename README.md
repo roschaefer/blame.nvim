@@ -83,3 +83,9 @@ To run diagnostics:
 ```
 
 Code formatting is managed using [stylua](https://github.com/JohnnyMorganz/StyLua).
+To format the code, or to check the formatting the same way CI does:
+
+```bash
+stylua lua
+stylua --check lua
+```
