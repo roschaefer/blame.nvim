@@ -146,6 +146,45 @@ describe("blame.blame_view", function()
 		blame_view:close()
 	end)
 
+	it("keeps lines aligned when the user config enables wrap or folds for the filetype", function()
+		local augroup = vim.api.nvim_create_augroup("blame_view_spec_user_config", { clear = true })
+		vim.api.nvim_create_autocmd("FileType", {
+			group = augroup,
+			pattern = "lua",
+			command = "setlocal wrap foldenable",
+		})
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				return blame_output_with_lines(50)
+			end,
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+
+		blame_view:mount()
+
+		assert.is_false(vim.wo[blame_view.file_winid].wrap)
+		assert.is_false(vim.wo[blame_view.file_winid].foldenable)
+		assert.is_false(vim.wo[blame_view.blame_winid].wrap)
+
+		-- Navigating sets the filetype again
+		blame_view.blame_lines = {
+			{
+				header = { commit = "hash1", source_line = 42, result_line = 1 },
+				previous = { commit = "prev_hash", filename = "file.lua" },
+			},
+		}
+		vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
+		blame_view:navigate_forward()
+
+		assert.is_false(vim.wo[blame_view.file_winid].wrap)
+		assert.is_false(vim.wo[blame_view.file_winid].foldenable)
+
+		blame_view:close()
+		vim.api.nvim_del_augroup_by_id(augroup)
+	end)
+
 	it("closes the tab page of the view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",

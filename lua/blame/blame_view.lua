@@ -72,8 +72,6 @@ function BlameView:mount()
 	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
 		local wo = vim.wo[winid][0]
 		wo.cursorline = true
-		wo.wrap = false
-		wo.foldenable = false
 		-- Keeps e.g. <C-o> from replacing the blame or file buffer
 		wo.winfixbuf = true
 	end
@@ -167,6 +165,20 @@ function BlameView:update_view(commit_info)
 
 	if filetype then
 		vim.api.nvim_set_option_value("filetype", filetype, { buf = self.file_bufnr })
+	end
+
+	-- Must come after setting the filetype, because ftplugins or the user config may change these options
+	self:keep_lines_aligned()
+end
+
+--- Makes every buffer line take exactly one screen row, so the lines of both windows stay aligned.
+--- 'scrollbind' and 'cursorbind' only sync buffer lines, not screen rows.
+function BlameView:keep_lines_aligned()
+	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
+		if winid and vim.api.nvim_win_is_valid(winid) then
+			vim.wo[winid][0].wrap = false
+			vim.wo[winid][0].foldenable = false
+		end
 	end
 end
 
