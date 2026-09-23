@@ -73,5 +73,6 @@ Before submitting changes, ensure all Lua files pass diagnostics:
 *   `lua/blame/breadcrumb.lua`: Implements the stack-based commit history navigation logic.
 *   `lua/blame/utils.lua`: Provides helper functions for window and cursor synchronization.
 *   `scripts/run`: Helper script to launch an isolated Neovim instance with lazy.nvim and blame.nvim activated.
+*   `scripts/run-user-config`: Helper script to launch the user's own Neovim configuration with this working copy of blame.nvim, via the project-local lazy.nvim spec in `.lazy.lua`.
 *   `tests/lua/`: Directory containing unit tests for all modules (e.g., `breadcrumb_spec.lua`, `git_spec.lua`).
 *   `.luarc.json`: Configuration file for Lua language server.
