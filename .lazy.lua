@@ -15,6 +15,9 @@ return {
 	{
 		"roschaefer/blame.nvim",
 		dir = root,
+		-- lazy.nvim ignores the packspec (`lazy.lua`) of local plugins, so
+		-- `setup()`, which creates the `:Blame` command, needs to be triggered here.
+		opts = {},
 		cmd = "Blame",
 	},
 }
