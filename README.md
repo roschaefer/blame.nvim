@@ -4,7 +4,7 @@
 
 ## Features
 
-* **Git Blame Integration:** Displays commit hash, author, date, and commit message for each line next to the file content.
+* **Git Blame Integration:** Displays the short commit hash, author, and date next to each block of lines from the same commit.
 * **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
 * **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<C-o>` to go backward) through revisions of a file.
 * **Custom Keymaps:** Configurable keybindings for navigation and closing.
