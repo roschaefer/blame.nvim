@@ -44,7 +44,6 @@ describe("blame.blame_view", function()
 		assert.is_true(vim.api.nvim_buf_is_valid(blame_view.file_bufnr))
 		assert.are.equal("nofile", vim.bo[blame_view.file_bufnr].buftype)
 		assert.is_false(vim.bo[blame_view.file_bufnr].modifiable)
-		assert.are.equal("blame", vim.bo[blame_view.blame_bufnr].filetype)
 		assert.is_nil(blame_view.tabpage)
 	end)
 
@@ -154,6 +153,7 @@ describe("blame.blame_view", function()
 		assert.are.equal(blame_view.file_bufnr, vim.api.nvim_win_get_buf(blame_view.file_winid))
 		assert.are.equal(" HEAD", vim.wo[blame_view.blame_winid].winbar)
 		assert.are.equal(" file.lua", vim.wo[blame_view.file_winid].winbar)
+		assert.are.equal("blame", vim.bo[blame_view.blame_bufnr].filetype)
 		assert.is_true(vim.wo[blame_view.blame_winid].winfixbuf)
 		assert.is_true(vim.wo[blame_view.file_winid].winfixbuf)
 		assert.spy(utils_initialize_cursor_position_spy).was.called(2)
@@ -195,6 +195,37 @@ describe("blame.blame_view", function()
 		assert.spy(filetype_autocmd).was.called(0)
 		assert.is_false(vim.wo[blame_view.file_winid].wrap)
 		assert.is_false(vim.wo[blame_view.file_winid].foldenable)
+
+		blame_view:close()
+		vim.api.nvim_del_augroup_by_id(augroup)
+	end)
+
+	it("lets the user config customize the blame window, except for the options the view depends on", function()
+		local augroup = vim.api.nvim_create_augroup("blame_view_spec_user_config", { clear = true })
+		vim.api.nvim_create_autocmd("FileType", {
+			group = augroup,
+			pattern = "blame",
+			command = "setlocal number nocursorline wrap foldenable noscrollbind nocursorbind nowinfixbuf",
+		})
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = function()
+				return blame_output_with_lines(3)
+			end,
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+
+		blame_view:mount()
+
+		local wo = vim.wo[blame_view.blame_winid]
+		assert.is_true(wo.number)
+		assert.is_false(wo.cursorline)
+		assert.is_false(wo.wrap)
+		assert.is_false(wo.foldenable)
+		assert.is_true(wo.scrollbind)
+		assert.is_true(wo.cursorbind)
+		assert.is_true(wo.winfixbuf)
 
 		blame_view:close()
 		vim.api.nvim_del_augroup_by_id(augroup)

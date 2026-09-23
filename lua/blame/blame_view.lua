@@ -67,8 +67,6 @@ function BlameView:new(dependencies)
 		blame_lines = {},
 	}
 
-	vim.api.nvim_set_option_value("filetype", "blame", { buf = instance.blame_bufnr })
-
 	setmetatable(instance, BlameView)
 	return instance
 end
@@ -88,12 +86,9 @@ function BlameView:mount()
 		width = math.floor(vim.o.columns * 0.25),
 	})
 
-	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
-		local wo = vim.wo[winid][0]
-		wo.cursorline = true
-		-- Keeps e.g. <C-o> from replacing the blame or file buffer
-		wo.winfixbuf = true
-	end
+	-- Defaults only: the user config may change them for the blame window via its filetype
+	vim.wo[self.blame_winid][0].cursorline = true
+	vim.wo[self.file_winid][0].cursorline = true
 	local blame_wo = vim.wo[self.blame_winid][0]
 	blame_wo.number = false
 	blame_wo.relativenumber = false
@@ -103,6 +98,7 @@ function BlameView:mount()
 	blame_wo.spell = false
 	blame_wo.winfixwidth = true
 	vim.wo[self.file_winid][0].number = true
+	vim.bo[self.blame_bufnr].filetype = "blame"
 
 	self:update_view(nil)
 
@@ -182,16 +178,22 @@ function BlameView:update_view(commit_info)
 	end
 	highlight_syntax(self.file_bufnr, filetype)
 
-	self:keep_lines_aligned()
+	self:enforce_view_options()
 end
 
---- Makes every buffer line take exactly one screen row, so the lines of both windows stay aligned.
---- 'scrollbind' and 'cursorbind' only sync buffer lines, not screen rows.
-function BlameView:keep_lines_aligned()
+--- Sets the window options the view depends on, overriding the user config.
+function BlameView:enforce_view_options()
 	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
 		if winid and vim.api.nvim_win_is_valid(winid) then
-			vim.wo[winid][0].wrap = false
-			vim.wo[winid][0].foldenable = false
+			local wo = vim.wo[winid][0]
+			wo.scrollbind = true
+			wo.cursorbind = true
+			-- 'scrollbind' and 'cursorbind' only sync buffer lines, not screen rows,
+			-- so every buffer line has to take exactly one screen row
+			wo.wrap = false
+			wo.foldenable = false
+			-- Keeps e.g. <C-o> from replacing the blame or file buffer
+			wo.winfixbuf = true
 		end
 	end
 end
