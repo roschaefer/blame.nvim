@@ -34,6 +34,25 @@ local function set_lines(bufnr, lines)
 	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
 end
 
+--- Highlights the syntax of a buffer without setting its 'filetype'.
+--- Setting the filetype would run ftplugins and FileType autocmds, e.g. LSP clients or plugins that
+--- add virtual lines, which misalign the file content with the blame information.
+--- @param bufnr number
+--- @param filetype string|nil
+local function highlight_syntax(bufnr, filetype)
+	vim.treesitter.stop(bufnr)
+	vim.bo[bufnr].syntax = ""
+	if not filetype then
+		return
+	end
+
+	local lang = vim.treesitter.language.get_lang(filetype)
+	if not (lang and pcall(vim.treesitter.start, bufnr, lang)) then
+		-- No tree-sitter parser is installed for this language
+		vim.bo[bufnr].syntax = filetype
+	end
+end
+
 function BlameView:new(dependencies)
 	local instance = {
 		git_instance = dependencies.git_instance,
@@ -155,19 +174,14 @@ function BlameView:update_view(commit_info)
 		})
 	end
 
-	-- Set filetype for highlighting
 	local filetype
 	if commit_info and commit_info.previous and commit_info.previous.filename then
 		filetype = vim.filetype.match({ filename = commit_info.previous.filename })
 	else
 		filetype = vim.filetype.match({ filename = self.git_instance.original_file })
 	end
+	highlight_syntax(self.file_bufnr, filetype)
 
-	if filetype then
-		vim.api.nvim_set_option_value("filetype", filetype, { buf = self.file_bufnr })
-	end
-
-	-- Must come after setting the filetype, because ftplugins or the user config may change these options
 	self:keep_lines_aligned()
 end
 

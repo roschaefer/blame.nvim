@@ -83,7 +83,24 @@ describe("blame.blame_view", function()
 
 		assert.is_false(vim.bo[blame_view.blame_bufnr].modifiable)
 		assert.is_false(vim.bo[blame_view.file_bufnr].modifiable)
-		assert.are.equal("lua", vim.bo[blame_view.file_bufnr].filetype)
+		assert.are.equal("", vim.bo[blame_view.file_bufnr].filetype)
+		assert.are.equal("", vim.bo[blame_view.file_bufnr].syntax)
+		assert.is_not_nil(vim.treesitter.highlighter.active[blame_view.file_bufnr])
+	end)
+
+	it("falls back to regex syntax highlighting without a tree-sitter parser", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.cob",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(1)),
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+
+		blame_view:update_view(nil)
+
+		assert.are.equal("", vim.bo[blame_view.file_bufnr].filetype)
+		assert.are.equal("cobol", vim.bo[blame_view.file_bufnr].syntax)
+		assert.is_nil(vim.treesitter.highlighter.active[blame_view.file_bufnr])
 	end)
 
 	it("removes all remaining lines when updating the view with fewer lines", function()
@@ -146,12 +163,15 @@ describe("blame.blame_view", function()
 		blame_view:close()
 	end)
 
-	it("keeps lines aligned when the user config enables wrap or folds for the filetype", function()
+	it("does not run FileType autocmds of the user config for the file content", function()
 		local augroup = vim.api.nvim_create_augroup("blame_view_spec_user_config", { clear = true })
+		local filetype_autocmd = spy.new(function() end)
 		vim.api.nvim_create_autocmd("FileType", {
 			group = augroup,
 			pattern = "lua",
-			command = "setlocal wrap foldenable",
+			callback = function()
+				filetype_autocmd()
+			end,
 		})
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
@@ -163,12 +183,6 @@ describe("blame.blame_view", function()
 		local blame_view = BlameView:new({ git_instance = mock_git })
 
 		blame_view:mount()
-
-		assert.is_false(vim.wo[blame_view.file_winid].wrap)
-		assert.is_false(vim.wo[blame_view.file_winid].foldenable)
-		assert.is_false(vim.wo[blame_view.blame_winid].wrap)
-
-		-- Navigating sets the filetype again
 		blame_view.blame_lines = {
 			{
 				header = { commit = "hash1", source_line = 42, result_line = 1 },
@@ -178,6 +192,7 @@ describe("blame.blame_view", function()
 		vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
 		blame_view:navigate_forward()
 
+		assert.spy(filetype_autocmd).was.called(0)
 		assert.is_false(vim.wo[blame_view.file_winid].wrap)
 		assert.is_false(vim.wo[blame_view.file_winid].foldenable)
 
