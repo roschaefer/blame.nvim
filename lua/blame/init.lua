@@ -9,9 +9,9 @@ local utils = require("blame.utils")
 -- TODO: Fix potential redundancy: The default `opts` from `lazy.lua` are passed to `M.setup` by lazy.vim.
 M.defaults = {
 	keys = {
-		navigate_forward = "<CR>",
-		navigate_backward = "<BS>",
-		close = { "<ESC>", "<C-c>", "q" },
+		navigate_forward = { "<CR>", "<C-]>" },
+		navigate_backward = { "<C-o>", "<C-t>", "<BS>" },
+		close = { "q", "<C-c>" },
 	},
 }
 
@@ -42,18 +42,14 @@ function M.show_blame_info()
 	-- Mount the layout
 	blame_view:mount()
 
-	-- Keymap for breadcrumb navigation (forward)
-	utils.add_keymap(blame_view.blame_bufnr, M.options.keys.navigate_forward, function()
-		blame_view:navigate_forward()
-	end)
-
-	-- Keymap for breadcrumb navigation (backward)
-	utils.add_keymap(blame_view.blame_bufnr, M.options.keys.navigate_backward, function()
-		blame_view:navigate_backward()
-	end)
-
-	-- Keymap for closing the blame view
+	-- The cursor rows of both windows are in sync, so every keymap works in both of them
 	for _, bufnr in ipairs({ blame_view.blame_bufnr, blame_view.file_bufnr }) do
+		utils.add_keymap(bufnr, M.options.keys.navigate_forward, function()
+			blame_view:navigate_forward()
+		end)
+		utils.add_keymap(bufnr, M.options.keys.navigate_backward, function()
+			blame_view:navigate_backward()
+		end)
 		utils.add_keymap(bufnr, M.options.keys.close, function()
 			blame_view:close()
 		end)

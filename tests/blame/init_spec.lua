@@ -41,9 +41,37 @@ describe("blame.init", function()
 		assert.are.same({ "q", "<C-c>" }, blame.options.keys.close)
 	end)
 
-	it("has default close keys of <ESC>, <C-c> and q", function()
+	it("has default close keys of q and <C-c>", function()
 		blame.setup({})
-		assert.are.same({ "<ESC>", "<C-c>", "q" }, blame.options.keys.close)
+		assert.are.same({ "q", "<C-c>" }, blame.options.keys.close)
+	end)
+
+	it("has default navigation keys like the tag stack and the jumplist", function()
+		blame.setup({})
+		assert.are.same({ "<CR>", "<C-]>" }, blame.options.keys.navigate_forward)
+		assert.are.same({ "<C-o>", "<C-t>", "<BS>" }, blame.options.keys.navigate_backward)
+	end)
+
+	it("maps all keys in both the blame and the file content buffer", function()
+		blame.setup({})
+		vim.cmd("edit README.md")
+		local original_tabpage = vim.api.nvim_get_current_tabpage()
+
+		blame.show_blame_info()
+
+		local wins = vim.api.nvim_tabpage_list_wins(0)
+		assert.are.equal(2, #wins)
+		for _, win in ipairs(wins) do
+			local mapped_keys = vim.tbl_map(function(keymap)
+				return keymap.lhs
+			end, vim.api.nvim_buf_get_keymap(vim.api.nvim_win_get_buf(win), "n"))
+			table.sort(mapped_keys)
+			assert.are.same({ "<BS>", "<C-C>", "<C-O>", "<C-T>", "<C-]>", "<CR>", "q" }, mapped_keys)
+		end
+
+		vim.api.nvim_feedkeys("q", "x", false)
+		assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+		vim.cmd("bwipeout README.md")
 	end)
 
 	it("shows a warning if the current file is not in a git repository", function()

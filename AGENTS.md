@@ -6,7 +6,7 @@
 
 *   **Git Blame Integration:** Parses `git blame` output to show commit, author, and date for each line.
 *   **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
-*   **Commit History Navigation (Breadcrumb):** Provides a stack-based navigation system (`<CR>` to go forward, `<BS>` to go backward) through different commit versions of a file. It prevents adding duplicate commits or the special "00000000" (uncommitted changes) revision to the history stack.
+*   **Commit History Navigation (Breadcrumb):** Provides a stack-based navigation system (`<CR>` or `<C-]>` to go forward, `<C-o>`, `<C-t>` or `<BS>` to go backward) through different commit versions of a file. It prevents adding duplicate commits or the special "00000000" (uncommitted changes) revision to the history stack.
 *   **Custom Keymaps:** Integrates intuitive keybindings for interaction.
 *   **User Command:** Exposes a user-friendly `:Blame` command to activate the plugin.
 

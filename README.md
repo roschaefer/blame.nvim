@@ -6,7 +6,7 @@
 
 * **Git Blame Integration:** Displays commit hash, author, date, and commit message for each line next to the file content.
 * **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
-* **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<BS>` to go backward) through revisions of a file.
+* **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<C-o>` to go backward) through revisions of a file.
 * **Custom Keymaps:** Configurable keybindings for navigation and closing.
 
 ## Installation
@@ -33,10 +33,11 @@ return {
 
 Navigate through the commit history:
 
-* Press `<CR>` on a blame line to view the file content at that commit.
-* Press `<BS>` to go back to the previous commit in the history.
+* Press `<CR>` (or `<C-]>`) on any line to view the file as it was before the commit that last changed this line.
+* Press `<C-o>` (or `<C-t>`, `<BS>`) to go back to the previous commit in the history.
+* Both work in the blame window and in the file content window, similar to following a tag with `<C-]>` and popping the tag stack with `<C-t>`.
 * Switch between the blame window and the file content window with the usual window commands, e.g. `<C-w>h` and `<C-w>l`.
-* Press `<ESC>`, `<C-c>`, or `q` to close the blame view. Closing one of its windows (e.g. `:q`) closes the whole view.
+* Press `q` or `<C-c>` to close the blame view. Closing one of its windows (e.g. `:q`) closes the whole view.
 
 Both buffers are read-only, but you can select and yank text as usual, e.g. `yiw` on a commit hash.
 
@@ -51,9 +52,9 @@ return {
     "roschaefer/blame.nvim",
     opts = {
       keys = {
-        navigate_forward = "<CR>",
-        navigate_backward = "<BS>",
-        close = { "<ESC>", "<C-c>", "q" },
+        navigate_forward = { "<CR>", "<C-]>" },
+        navigate_backward = { "<C-o>", "<C-t>", "<BS>" },
+        close = { "q", "<C-c>" },
       },
     },
     cmd = "Blame",
