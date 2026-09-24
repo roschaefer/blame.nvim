@@ -471,4 +471,66 @@ describe("blame.blame_view", function()
 
 		blame_view:close()
 	end)
+
+	it("does not open the view when git blame fails", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", nil),
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		local original_tabpage = vim.api.nvim_get_current_tabpage()
+
+		assert.is_false(blame_view:mount())
+
+		assert.are.same({ original_tabpage }, vim.api.nvim_list_tabpages())
+		assert.is_false(vim.api.nvim_buf_is_valid(blame_view.blame_bufnr))
+		assert.is_false(vim.api.nvim_buf_is_valid(blame_view.file_bufnr))
+	end)
+
+	it("stays at the current version when git blame fails for the previous one", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		assert.is_true(blame_view:mount())
+		blame_view.blame_lines[1].previous = { commit = "prev_hash", filename = "file.lua" }
+		vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
+		mock_git.get_blame_output = stub({}, "get_blame_output", nil)
+
+		blame_view:navigate_forward()
+
+		assert.are.equal(1, #blame_view.breadcrumb.stack)
+		assert.are.equal(3, #blame_view.blame_lines)
+		assert.are.same(
+			{ "line content 1", "line content 2", "line content 3" },
+			vim.api.nvim_buf_get_lines(blame_view.file_bufnr, 0, -1, false)
+		)
+		assert.are.equal(" HEAD", vim.wo[blame_view.blame_winid].winbar)
+
+		blame_view:close()
+	end)
+
+	it("stays at the current version when git blame fails for the one to go back to", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		assert.is_true(blame_view:mount())
+		blame_view.blame_lines[1].previous = { commit = "prev_hash", filename = "file.lua" }
+		vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
+		blame_view:navigate_forward()
+		mock_git.get_blame_output = stub({}, "get_blame_output", nil)
+
+		blame_view:navigate_backward()
+
+		assert.are.equal(2, #blame_view.breadcrumb.stack)
+		assert.are.equal(" prev_has", vim.wo[blame_view.blame_winid].winbar)
+
+		blame_view:close()
+	end)
 end)

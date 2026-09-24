@@ -74,7 +74,17 @@ function BlameView:new(dependencies)
 	return instance
 end
 
+--- Opens the view in a new tab page.
+--- @return boolean mounted false if git blame failed, then nothing is opened
 function BlameView:mount()
+	-- Run git blame first, so a failure does not leave an empty tab page behind
+	local blame_output = self.git_instance:get_blame_output(nil)
+	if not blame_output then
+		vim.api.nvim_buf_delete(self.blame_bufnr, { force = true })
+		vim.api.nvim_buf_delete(self.file_bufnr, { force = true })
+		return false
+	end
+
 	local current_file_win = vim.api.nvim_get_current_win()
 	local cursor_pos = vim.api.nvim_win_get_cursor(current_file_win)
 	self.breadcrumb:push({ commit_info = nil, cursor_pos = cursor_pos })
@@ -107,7 +117,7 @@ function BlameView:mount()
 	vim.wo[self.file_winid][0].number = true
 	vim.bo[self.blame_bufnr].filetype = "blame"
 
-	self:update_view(nil)
+	self:update_view(nil, blame_output)
 
 	utils.initialize_cursor_position(current_file_win, self.blame_winid)
 	utils.initialize_cursor_position(current_file_win, self.file_winid)
@@ -126,14 +136,17 @@ function BlameView:mount()
 			end)
 		end,
 	})
+	return true
 end
 
-function BlameView:update_view(commit_info)
-	local blame_result_stdout = self.git_instance:get_blame_output(commit_info)
-	self.blame_lines = {}
-
+--- Shows the blame and file content of a version.
+--- @param commit_info table|nil The line whose previous version to show, nil for the current one
+--- @param blame_output string|nil The output of git blame, if it has already been run
+--- @return boolean updated false if git blame failed, then the view stays unchanged
+function BlameView:update_view(commit_info, blame_output)
+	local blame_result_stdout = blame_output or self.git_instance:get_blame_output(commit_info)
 	if not blame_result_stdout then
-		return
+		return false
 	end
 
 	local blame_title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8)) or "HEAD"
@@ -188,6 +201,7 @@ function BlameView:update_view(commit_info)
 	highlight_syntax(self.file_bufnr, filetype)
 
 	self:enforce_view_options()
+	return true
 end
 
 --- Sets the window options the view depends on, overriding the user config.
@@ -241,7 +255,10 @@ function BlameView:navigate_forward()
 	end
 
 	if self.breadcrumb:push({ commit_info = commit_info, cursor_pos = nil }) then
-		self:update_view(commit_info)
+		if not self:update_view(commit_info) then
+			self.breadcrumb:pop()
+			return
+		end
 		if commit_info and commit_info.header and commit_info.header.source_line then
 			self:set_cursor({ commit_info.header.source_line, 0 })
 		end
@@ -253,9 +270,12 @@ function BlameView:navigate_backward()
 		vim.notify("blame.nvim: No more history to go back to.", vim.log.levels.INFO)
 		return
 	end
-	self.breadcrumb:pop()
+	local popped = self.breadcrumb:pop()
 	local current = self.breadcrumb:current()
-	self:update_view(current.commit_info)
+	if not self:update_view(current.commit_info) then
+		self.breadcrumb:push(popped)
+		return
+	end
 
 	if current.cursor_pos then
 		self:set_cursor(current.cursor_pos)

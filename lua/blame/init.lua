@@ -39,8 +39,9 @@ function M.show_blame_info()
 		return
 	end
 
-	-- Mount the layout
-	blame_view:mount()
+	if not blame_view:mount() then
+		return
+	end
 
 	-- The cursor rows of both windows are in sync, so every keymap works in both of them
 	for _, bufnr in ipairs({ blame_view.blame_bufnr, blame_view.file_bufnr }) do
