@@ -1,5 +1,20 @@
 # Changelog
 
+## [2.0.0](https://github.com/roschaefer/blame.nvim/compare/v1.2.0...v2.0.0) (2026-09-24)
+
+
+### ⚠ BREAKING CHANGES
+
+* **view:** replace nui popups with synced splits in a tab page ([#45](https://github.com/roschaefer/blame.nvim/issues/45))
+
+### Features
+
+* **navigation:** move cursor to commit_info.source_line ([#37](https://github.com/roschaefer/blame.nvim/issues/37)) ([9480b82](https://github.com/roschaefer/blame.nvim/commit/9480b82604157131f90c9b2e0d8a0002857690cd))
+* **navigation:** restore old cursor position ([#40](https://github.com/roschaefer/blame.nvim/issues/40)) ([a315963](https://github.com/roschaefer/blame.nvim/commit/a315963b7fb68fa593cb7b05b2f105206e0e2a54))
+* **scripts:** add script to run Neovim with lazy.nvim and plugin activated ([#42](https://github.com/roschaefer/blame.nvim/issues/42)) ([45ec4e6](https://github.com/roschaefer/blame.nvim/commit/45ec4e6aa86d12695dc1c3fa053cc8260e35e674))
+* **scripts:** run own Neovim config with local plugin copy ([#44](https://github.com/roschaefer/blame.nvim/issues/44)) ([f6aa242](https://github.com/roschaefer/blame.nvim/commit/f6aa242d3754bf6f8c896fe11bd91459ccbfc0c4))
+* **view:** replace nui popups with synced splits in a tab page ([#45](https://github.com/roschaefer/blame.nvim/issues/45)) ([a5b8884](https://github.com/roschaefer/blame.nvim/commit/a5b888420a7f37b42380bf5e64f2c32ffcca8662))
+
 ## [1.2.0](https://github.com/roschaefer/blame.nvim/compare/v1.1.0...v1.2.0) (2026-02-23)
 
 
