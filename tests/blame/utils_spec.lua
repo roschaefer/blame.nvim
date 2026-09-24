@@ -115,10 +115,6 @@ describe("blame.utils: integrates with real Neovim windows", function()
 			return vim.fn.line("w0")
 		end)
 		assert.are.same(expected_top_line, blame_top_line)
-
-		-- Assert scrollbind and cursorbind options were set for both windows
-		assert.is_true(vim.api.nvim_get_option_value("scrollbind", { win = blame_win_id }))
-		assert.is_true(vim.api.nvim_get_option_value("cursorbind", { win = blame_win_id }))
 	end)
 
 	it("handles cursor position exceeding line count", function()
@@ -152,5 +148,25 @@ describe("blame.utils: integrates with real Neovim windows", function()
 		utils.set_cursor_to_line(blame_win_id, 0)
 		cursor_pos = vim.api.nvim_win_get_cursor(blame_win_id)
 		assert.are.same({ 1, 0 }, cursor_pos)
+	end)
+
+	it("sets the cursor column using set_cursor_to_line", function()
+		utils.set_cursor_to_line(original_win_id, 5, 3)
+		assert.are.same({ 5, 3 }, vim.api.nvim_win_get_cursor(original_win_id))
+
+		-- A column beyond the end of the line moves to its last character
+		utils.set_cursor_to_line(original_win_id, 5, 100)
+		assert.are.same({ 5, 5 }, vim.api.nvim_win_get_cursor(original_win_id))
+	end)
+
+	it("adds a buffer-local normal mode keymap for each key", function()
+		local handler = function() end
+
+		utils.add_keymap(blame_buf_id, { "q", "<C-c>" }, handler)
+
+		assert.are.equal(handler, vim.fn.maparg("q", "n", false, true).callback)
+		assert.are.equal(handler, vim.fn.maparg("<C-c>", "n", false, true).callback)
+		assert.are.equal(1, vim.fn.maparg("q", "n", false, true).buffer)
+		assert.are.same({}, vim.api.nvim_buf_get_keymap(original_buf_id, "n"))
 	end)
 end)

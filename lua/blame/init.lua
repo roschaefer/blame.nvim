@@ -9,10 +9,9 @@ local utils = require("blame.utils")
 -- TODO: Fix potential redundancy: The default `opts` from `lazy.lua` are passed to `M.setup` by lazy.vim.
 M.defaults = {
 	keys = {
-		navigate_forward = "<CR>",
-		navigate_backward = "<BS>",
-		switch_focus = "<TAB>",
-		close = { "<ESC>", "<C-c>", "q" },
+		navigate_forward = { "<CR>", "<C-]>" },
+		navigate_backward = { "<C-o>", "<C-t>", "<BS>" },
+		close = { "q", "<C-c>" },
 	},
 }
 
@@ -20,11 +19,11 @@ M.defaults = {
 function M.setup(opts)
 	M.options = vim.tbl_deep_extend("force", {}, M.defaults, opts or {})
 	vim.api.nvim_create_user_command("Blame", M.show_blame_info, {
-		desc = "Show git blame information and file content in a popup.",
+		desc = "Show git blame information and file content side by side.",
 	})
 end
 
--- Function to show blame info in a nui.popup
+-- Function to show blame info next to the file content in a new tab page
 function M.show_blame_info()
 	local current_file_buf = vim.api.nvim_get_current_buf()
 
@@ -40,36 +39,21 @@ function M.show_blame_info()
 		return
 	end
 
-	-- Mount the layout
-	blame_view:mount()
-
-	-- Keymap for breadcrumb navigation (forward)
-	utils.add_keymap(blame_view.blame_popup_instance, M.options.keys.navigate_forward, function()
-		blame_view:navigate_forward()
-	end)
-
-	-- Keymap for breadcrumb navigation (backward)
-	utils.add_keymap(blame_view.blame_popup_instance, M.options.keys.navigate_backward, function()
-		blame_view:navigate_backward()
-	end)
-
-	-- Keymap for switching focus
-	local popups_list = {
-		blame_view.blame_popup_instance,
-		blame_view.file_popup_instance,
-	}
-	for _, popup in pairs(popups_list) do
-		utils.add_keymap(popup, M.options.keys.switch_focus, function()
-			blame_view:switch_focus()
+	-- The cursor rows of both windows are in sync, so every keymap works in both of them.
+	-- Mapped before mounting, which sets the filetype, so keymaps of the user config for it take precedence.
+	for _, bufnr in ipairs({ blame_view.blame_bufnr, blame_view.file_bufnr }) do
+		utils.add_keymap(bufnr, M.options.keys.navigate_forward, function()
+			blame_view:navigate_forward()
 		end)
-	end
-
-	-- Keymap for closing the blame view
-	for _, popup in pairs(popups_list) do
-		utils.add_keymap(popup, M.options.keys.close, function()
+		utils.add_keymap(bufnr, M.options.keys.navigate_backward, function()
+			blame_view:navigate_backward()
+		end)
+		utils.add_keymap(bufnr, M.options.keys.close, function()
 			blame_view:close()
 		end)
 	end
+
+	blame_view:mount()
 end
 
 return M

@@ -24,15 +24,13 @@ function M.initialize_cursor_position(original_win, win)
 	vim.api.nvim_win_call(win, function()
 		vim.fn.winrestview({ topline = original_top_line })
 	end)
-
-	vim.api.nvim_set_option_value("scrollbind", true, { scope = "local", win = win })
-	vim.api.nvim_set_option_value("cursorbind", true, { scope = "local", win = win })
 end
 
 --- Sets the cursor position in a window to a specific line.
 --- @param win number The handle of the window.
 --- @param line_num number The line number to set the cursor to.
-function M.set_cursor_to_line(win, line_num)
+--- @param col number|nil The column, 0 by default. Neovim moves a column beyond the end of the line to its last character.
+function M.set_cursor_to_line(win, line_num, col)
 	if not win or not vim.api.nvim_win_is_valid(win) then
 		return
 	end
@@ -44,18 +42,18 @@ function M.set_cursor_to_line(win, line_num)
 	if line_num < 1 then
 		line_num = 1
 	end
-	vim.api.nvim_win_set_cursor(win, { line_num, 0 })
+	vim.api.nvim_win_set_cursor(win, { line_num, col or 0 })
 end
 
---- Adds a keymap for one or many keys to a popup.
---- @param popup table The nui.popup instance.
+--- Adds a normal mode keymap for one or many keys to a buffer.
+--- @param bufnr number The buffer handle.
 --- @param keys string|table The key or list of keys to map.
 --- @param handler function The function to execute.
-function M.add_keymap(popup, keys, handler)
+function M.add_keymap(bufnr, keys, handler)
 	local key_list = type(keys) == "table" and keys or { keys }
 	for _, key in ipairs(key_list) do
-		popup:map("n", key, handler, {
-			noremap = true,
+		vim.keymap.set("n", key, handler, {
+			buffer = bufnr,
 			silent = true,
 		})
 	end
