@@ -102,6 +102,27 @@ describe("blame.blame_view", function()
 		assert.is_nil(vim.treesitter.highlighter.active[blame_view.file_bufnr])
 	end)
 
+	it("detects the language from the file content if the file name is not enough", function()
+		local mock_git = {
+			original_file = "/path/to/repo/script",
+			git_root = "/path/to/repo",
+			get_blame_output = stub(
+				{},
+				"get_blame_output",
+				"abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename script\n\t#!/usr/bin/env python3\n"
+			),
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+
+		blame_view:update_view(nil)
+
+		-- Highlighted with tree-sitter or regex syntax, depending on the installed parsers
+		local highlighter = vim.treesitter.highlighter.active[blame_view.file_bufnr]
+		local language = highlighter and highlighter.tree:lang() or vim.bo[blame_view.file_bufnr].syntax
+		assert.are.equal("python", language)
+		assert.are.equal("", vim.bo[blame_view.file_bufnr].filetype)
+	end)
+
 	it("removes all remaining lines when updating the view with fewer lines", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",

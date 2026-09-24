@@ -193,12 +193,14 @@ function BlameView:update_view(commit_info, blame_output)
 		})
 	end
 
-	local filetype
+	local filename
 	if commit_info and commit_info.previous and commit_info.previous.filename then
-		filetype = vim.filetype.match({ filename = commit_info.previous.filename })
+		filename = commit_info.previous.filename
 	else
-		filetype = vim.filetype.match({ filename = self.git_instance.original_file })
+		filename = self.git_instance.original_file
 	end
+	-- Passing the buffer also detects filetypes from the content, e.g. from a shebang
+	local filetype = vim.filetype.match({ buf = self.file_bufnr, filename = filename })
 	highlight_syntax(self.file_bufnr, filetype)
 
 	self:enforce_view_options()
