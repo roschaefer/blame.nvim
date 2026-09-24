@@ -90,16 +90,19 @@ function BlameView:mount()
 		width = math.floor(vim.o.columns * 0.25),
 	})
 
-	-- Defaults only: the user config may change them for the blame window via its filetype
+	-- Defaults only: the user config may change them for the blame window via its filetype.
+	-- New windows take over the window-local options of the window `:Blame` was run from, so reset the gutter.
 	vim.wo[self.blame_winid][0].cursorline = true
 	vim.wo[self.file_winid][0].cursorline = true
 	local blame_wo = vim.wo[self.blame_winid][0]
 	blame_wo.number = false
 	blame_wo.relativenumber = false
+	blame_wo.statuscolumn = ""
 	blame_wo.signcolumn = "no"
 	blame_wo.foldcolumn = "0"
 	blame_wo.list = false
 	blame_wo.spell = false
+	blame_wo.colorcolumn = ""
 	blame_wo.winfixwidth = true
 	vim.wo[self.file_winid][0].number = true
 	vim.bo[self.blame_bufnr].filetype = "blame"
@@ -198,6 +201,8 @@ function BlameView:enforce_view_options()
 			-- so every buffer line has to take exactly one screen row
 			wo.wrap = false
 			wo.foldenable = false
+			-- Diff mode adds filler lines, e.g. when `:Blame` is run from a diff window
+			wo.diff = false
 			-- Keeps e.g. <C-o> from replacing the blame or file buffer
 			wo.winfixbuf = true
 		end

@@ -200,6 +200,30 @@ describe("blame.blame_view", function()
 		vim.api.nvim_del_augroup_by_id(augroup)
 	end)
 
+	it("does not take over diff mode or the gutter of the window it was opened from", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		vim.cmd("vsplit")
+		local source_winid = vim.api.nvim_get_current_win()
+		vim.wo[source_winid].diff = true
+		vim.wo[source_winid].statuscolumn = "%l "
+		vim.wo[source_winid].colorcolumn = "80"
+
+		blame_view:mount()
+
+		assert.is_false(vim.wo[blame_view.blame_winid].diff)
+		assert.is_false(vim.wo[blame_view.file_winid].diff)
+		assert.are.equal("", vim.wo[blame_view.blame_winid].statuscolumn)
+		assert.are.equal("", vim.wo[blame_view.blame_winid].colorcolumn)
+
+		blame_view:close()
+		vim.api.nvim_win_close(source_winid, true)
+	end)
+
 	it("lets the user config customize the blame window, except for the options the view depends on", function()
 		local augroup = vim.api.nvim_create_augroup("blame_view_spec_user_config", { clear = true })
 		vim.api.nvim_create_autocmd("FileType", {
