@@ -149,7 +149,8 @@ function BlameView:update_view(commit_info, blame_output)
 		return false
 	end
 
-	local blame_title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8)) or "HEAD"
+	local blame_title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8))
+		or "Working tree"
 	set_title(self.blame_winid, blame_title)
 
 	local file_title
