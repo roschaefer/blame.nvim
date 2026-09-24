@@ -230,10 +230,7 @@ end
 --- @param cursor_pos table {row, col}
 function BlameView:set_cursor(cursor_pos)
 	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
-		utils.set_cursor_to_line(winid, cursor_pos[1])
-		-- Neovim moves a column beyond the end of the line to the last character
-		local row = vim.api.nvim_win_get_cursor(winid)[1]
-		vim.api.nvim_win_set_cursor(winid, { row, cursor_pos[2] })
+		utils.set_cursor_to_line(winid, cursor_pos[1], cursor_pos[2])
 	end
 	vim.api.nvim_win_call(self.file_winid, function()
 		vim.cmd("syncbind")

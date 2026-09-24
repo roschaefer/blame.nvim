@@ -24,15 +24,13 @@ function M.initialize_cursor_position(original_win, win)
 	vim.api.nvim_win_call(win, function()
 		vim.fn.winrestview({ topline = original_top_line })
 	end)
-
-	vim.api.nvim_set_option_value("scrollbind", true, { scope = "local", win = win })
-	vim.api.nvim_set_option_value("cursorbind", true, { scope = "local", win = win })
 end
 
 --- Sets the cursor position in a window to a specific line.
 --- @param win number The handle of the window.
 --- @param line_num number The line number to set the cursor to.
-function M.set_cursor_to_line(win, line_num)
+--- @param col number|nil The column, 0 by default. Neovim moves a column beyond the end of the line to its last character.
+function M.set_cursor_to_line(win, line_num, col)
 	if not win or not vim.api.nvim_win_is_valid(win) then
 		return
 	end
@@ -44,7 +42,7 @@ function M.set_cursor_to_line(win, line_num)
 	if line_num < 1 then
 		line_num = 1
 	end
-	vim.api.nvim_win_set_cursor(win, { line_num, 0 })
+	vim.api.nvim_win_set_cursor(win, { line_num, col or 0 })
 end
 
 --- Adds a normal mode keymap for one or many keys to a buffer.

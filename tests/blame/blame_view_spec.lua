@@ -149,9 +149,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(3)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 		local original_tabpage = vim.api.nvim_get_current_tabpage()
@@ -197,9 +195,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(50)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 
@@ -255,9 +251,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(3)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 
@@ -280,9 +274,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(3)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 		local original_tabpage = vim.api.nvim_get_current_tabpage()
@@ -301,9 +293,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(3)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
 		}
 		local original_tabpage = vim.api.nvim_get_current_tabpage()
 		vim.cmd("tabnew")
@@ -324,9 +314,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(3)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
 		}
 		local original_tabpage = vim.api.nvim_get_current_tabpage()
 		vim.cmd("tabnew")
@@ -349,9 +337,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(3)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 		blame_view:mount()
@@ -373,9 +359,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(3)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 		blame_view:mount()
@@ -393,9 +377,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(50)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
 		}
 
 		local blame_view = BlameView:new({
@@ -429,9 +411,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(50)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
 		}
 
 		local blame_view = BlameView:new({
@@ -470,9 +450,7 @@ describe("blame.blame_view", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
-			get_blame_output = function()
-				return blame_output_with_lines(50)
-			end,
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 		blame_view:mount()
