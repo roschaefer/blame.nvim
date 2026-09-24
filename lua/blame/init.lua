@@ -39,11 +39,8 @@ function M.show_blame_info()
 		return
 	end
 
-	if not blame_view:mount() then
-		return
-	end
-
-	-- The cursor rows of both windows are in sync, so every keymap works in both of them
+	-- The cursor rows of both windows are in sync, so every keymap works in both of them.
+	-- Mapped before mounting, which sets the filetype, so keymaps of the user config for it take precedence.
 	for _, bufnr in ipairs({ blame_view.blame_bufnr, blame_view.file_bufnr }) do
 		utils.add_keymap(bufnr, M.options.keys.navigate_forward, function()
 			blame_view:navigate_forward()
@@ -55,6 +52,8 @@ function M.show_blame_info()
 			blame_view:close()
 		end)
 	end
+
+	blame_view:mount()
 end
 
 return M

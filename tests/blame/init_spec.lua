@@ -74,6 +74,27 @@ describe("blame.init", function()
 		vim.cmd("bwipeout README.md")
 	end)
 
+	it("keeps keymaps of the user config for the blame filetype", function()
+		local augroup = vim.api.nvim_create_augroup("init_spec_user_config", { clear = true })
+		vim.api.nvim_create_autocmd("FileType", {
+			group = augroup,
+			pattern = "blame",
+			command = "nnoremap <buffer> q <Cmd>let g:init_spec_user_q = 1<CR>",
+		})
+		blame.setup({})
+		vim.cmd("edit README.md")
+		local original_tabpage = vim.api.nvim_get_current_tabpage()
+
+		blame.show_blame_info()
+
+		assert.are.equal("<Cmd>let g:init_spec_user_q = 1<CR>", vim.fn.maparg("q", "n"))
+
+		vim.api.nvim_feedkeys(vim.keycode("<C-c>"), "x", false)
+		assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+		vim.api.nvim_del_augroup_by_id(augroup)
+		vim.cmd("bwipeout README.md")
+	end)
+
 	it("shows a warning if the current file is not in a git repository", function()
 		local tmpdir = vim.fn.tempname()
 		vim.fn.mkdir(tmpdir, "p")

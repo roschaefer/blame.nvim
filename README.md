@@ -72,6 +72,8 @@ vim.opt_local.number = true
 vim.opt_local.cursorline = false
 ```
 
+Buffer-local keymaps defined there take precedence over the keymaps of `blame.nvim`.
+
 The view always sets these options in both windows, because it needs them to keep the lines of both windows aligned: `scrollbind`, `cursorbind`, `nowrap`, `nofoldenable`, `nodiff` and `winfixbuf`.
 
 The file content window has no filetype. It is highlighted with tree-sitter, or with regex syntax highlighting if no parser is installed. Your ftplugins, LSP clients and other filetype plugins do not run there.
