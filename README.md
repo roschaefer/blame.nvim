@@ -92,7 +92,7 @@ nix develop
 ```
 
 `nix develop` starts bash. To keep your shell, run e.g. `nix develop --command fish`, or use [direnv](https://direnv.net) with `use flake`.
-The scripts below work the same with tools installed in any other way.
+The scripts below work the same with tools installed in any other way, as long as they are on your `PATH`.
 
 To start Neovim with `lazy.nvim` and only this plugin activated:
 
