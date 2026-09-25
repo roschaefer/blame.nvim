@@ -85,6 +85,15 @@ The file content window has no filetype. It is highlighted with tree-sitter, or 
 
 ## Development
 
+The development tools (Neovim, git, stylua, lua-language-server and llscheck) are provided by a [Nix](https://nixos.org) dev shell:
+
+```bash
+nix develop
+```
+
+`nix develop` starts bash. To keep your shell, run e.g. `nix develop --command fish`, or use [direnv](https://direnv.net) with `use flake`.
+The scripts below work the same with tools installed in any other way.
+
 To start Neovim with `lazy.nvim` and only this plugin activated:
 
 ```bash

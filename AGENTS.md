@@ -15,6 +15,7 @@
 *   **Language:** The plugin is entirely written in Lua.
 *   **Neovim API Usage:** Extensively utilizes `vim.api` for core Neovim interactions (e.g., buffer and window manipulation, keymap settings) and `vim.system` for asynchronous execution of Git commands.
 *   **Module Structure:** Code is organized into modules under the `lua/blame/` directory.
+*   **Tools:** `nix develop` provides all development tools (Neovim, git, stylua, lua-language-server, llscheck), see `flake.nix`.
 *   **Formatting:** All Lua files are formatted using `stylua`.
 *   **Diagnostics:** Lua Language Server diagnostics are checked using `scripts/llscheck` (based on [llscheck](https://github.com/jeffzi/llscheck)). All code must be free of diagnostic errors.
 *   **UI:** Uses plain Neovim splits in a dedicated tab page (no UI library), so standard window commands, jumps and yanking keep working.
