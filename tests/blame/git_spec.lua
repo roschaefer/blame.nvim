@@ -1,6 +1,7 @@
 -- tests/lua/git_spec.lua
 
 local assert = require("luassert")
+local stub = require("luassert.stub")
 local Git = require("blame.git")
 
 describe("blame.git", function()
@@ -64,6 +65,73 @@ describe("blame.git", function()
 			assert.is_not_nil(match)
 
 			vim.api.nvim_buf_delete(buf_id, { force = true })
+		end)
+	end)
+
+	describe("get_commit_message", function()
+		local repo
+		local git
+		local git_env = {
+			GIT_CONFIG_GLOBAL = "/dev/null",
+			GIT_CONFIG_NOSYSTEM = "1",
+			GIT_AUTHOR_NAME = "Test Author",
+			GIT_AUTHOR_EMAIL = "author@example.com",
+			GIT_AUTHOR_DATE = "2026-01-02T03:04:05+0000",
+			GIT_COMMITTER_NAME = "Test Committer",
+			GIT_COMMITTER_EMAIL = "committer@example.com",
+			GIT_COMMITTER_DATE = "2026-01-02T03:04:05+0000",
+		}
+		local previous_env = {}
+
+		before_each(function()
+			-- The user config must not change the output, e.g. with `log.date`
+			for name, value in pairs(git_env) do
+				previous_env[name] = vim.env[name]
+				vim.env[name] = value
+			end
+			repo = vim.fn.tempname()
+			vim.fn.mkdir(repo, "p")
+			vim.system({ "git", "init", "--quiet" }, { cwd = repo }):wait()
+			vim.system(
+				{ "git", "commit", "--quiet", "--allow-empty", "-m", "Add a subject", "-m", "Explain why." },
+				{ cwd = repo }
+			):wait()
+			local buf_id = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_id, repo .. "/file")
+			git = Git:new(buf_id)
+			vim.api.nvim_buf_delete(buf_id, { force = true })
+		end)
+
+		after_each(function()
+			for name in pairs(git_env) do
+				vim.env[name] = previous_env[name]
+			end
+			vim.fn.delete(repo, "rf")
+		end)
+
+		it("returns the message, hash, author and date of a commit", function()
+			assert(git)
+
+			local message = git:get_commit_message("HEAD")
+
+			assert.are.same({
+				"commit a91719acddede54654abd65439ae1535ad22819c",
+				"Author: Test Author <author@example.com>",
+				"Date:   Fri Jan 2 03:04:05 2026 +0000",
+				"",
+				"    Add a subject",
+				"    ",
+				"    Explain why.",
+			}, message)
+		end)
+
+		it("returns nil and shows a warning if the commit does not exist", function()
+			assert(git)
+			local notify_stub = stub(vim, "notify")
+
+			assert.is_nil(git:get_commit_message("does-not-exist"))
+
+			assert.stub(notify_stub).was.called(1)
 		end)
 	end)
 end)

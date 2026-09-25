@@ -12,6 +12,7 @@ M.defaults = {
 		navigate_forward = { "<CR>", "<C-]>" },
 		navigate_backward = { "<C-o>", "<C-t>", "<BS>" },
 		close = { "q", "<C-c>" },
+		toggle_commit_message = "K",
 	},
 }
 
@@ -51,7 +52,16 @@ function M.show_blame_info()
 		utils.add_keymap(bufnr, M.options.keys.close, function()
 			blame_view:close()
 		end)
+		utils.add_keymap(bufnr, M.options.keys.toggle_commit_message, function()
+			blame_view:toggle_commit_message()
+		end)
 	end
+	utils.add_keymap(blame_view.commit_panel.bufnr, M.options.keys.toggle_commit_message, function()
+		blame_view.commit_panel:close()
+	end)
+	utils.add_keymap(blame_view.commit_panel.bufnr, M.options.keys.close, function()
+		blame_view:close()
+	end)
 
 	blame_view:mount()
 end

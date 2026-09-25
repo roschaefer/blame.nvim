@@ -6,6 +6,7 @@
 
 * **Git Blame Integration:** Displays the short commit hash, author, and date next to each block of lines from the same commit.
 * **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
+* **Commit Message Panel:** Shows the full commit message of the cursor line on demand (`K`), to answer why a line is there.
 * **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<C-o>` to go backward) through revisions of a file.
 * **Custom Keymaps:** Configurable keybindings for navigation and closing.
 
@@ -37,7 +38,8 @@ Navigate through the commit history:
 * Press `<C-o>` (or `<C-t>`, `<BS>`) to go back to the previous commit in the history.
 * Both work in the blame window and in the file content window, similar to following a tag with `<C-]>` and popping the tag stack with `<C-t>`.
 * Switch between the blame window and the file content window with the usual window commands, e.g. `<C-w>h` and `<C-w>l`.
-* Press `q` or `<C-c>` to close the blame view. Closing one of its windows (e.g. `:q`) closes the whole view.
+* Press `K` to open or close a panel at the bottom with the full commit message, author and date of the cursor line. It follows the cursor while it is open. Pressing `K` inside the panel closes it and returns to the window you came from, `q` closes the whole view. It is a preview window, so `<C-w>z` and `:pclose` close it as well.
+* Press `q` or `<C-c>` to close the blame view. Closing the blame or the file content window (e.g. `:q`) closes the whole view.
 
 Both buffers are read-only, but you can select and yank text as usual, e.g. `yiw` on a commit hash.
 
@@ -55,6 +57,7 @@ return {
         navigate_forward = { "<CR>", "<C-]>" },
         navigate_backward = { "<C-o>", "<C-t>", "<BS>" },
         close = { "q", "<C-c>" },
+        toggle_commit_message = "K",
       },
     },
     cmd = "Blame",
@@ -75,6 +78,8 @@ vim.opt_local.cursorline = false
 Buffer-local keymaps defined there take precedence over the keymaps of `blame.nvim`.
 
 The view always sets these options in both windows, because it needs them to keep the lines of both windows aligned: `scrollbind`, `cursorbind`, `nowrap`, `nofoldenable`, `nodiff` and `winfixbuf`.
+
+The commit message panel has the filetype `git`.
 
 The file content window has no filetype. It is highlighted with tree-sitter, or with regex syntax highlighting if no parser is installed. Your ftplugins, LSP clients and other filetype plugins do not run there.
 

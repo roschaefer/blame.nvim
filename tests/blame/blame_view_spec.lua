@@ -287,6 +287,7 @@ describe("blame.blame_view", function()
 		assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
 		assert.is_false(vim.api.nvim_buf_is_valid(blame_view.blame_bufnr))
 		assert.is_false(vim.api.nvim_buf_is_valid(blame_view.file_bufnr))
+		assert.is_false(vim.api.nvim_buf_is_valid(blame_view.commit_panel.bufnr))
 	end)
 
 	it("returns to the tab page it was opened from when there are more tab pages", function()
@@ -531,5 +532,128 @@ describe("blame.blame_view", function()
 		assert.are.equal(" prev_has", vim.wo[blame_view.blame_winid].winbar)
 
 		blame_view:close()
+	end)
+
+	describe("commit panel", function()
+		local two_commits = table.concat({
+			"1111111111111111111111111111111111111111 1 1 1",
+			"author First",
+			"author-time 123456789",
+			"previous 3333333333333333333333333333333333333333 file.lua",
+			"filename file.lua",
+			"\tline content 1",
+			"2222222222222222222222222222222222222222 5 2 1",
+			"author Second",
+			"author-time 123456789",
+			"filename file.lua",
+			"\tline content 2",
+		}, "\n")
+		local mock_git
+
+		before_each(function()
+			mock_git = {
+				original_file = "/path/to/repo/file.lua",
+				git_root = "/path/to/repo",
+				get_blame_output = stub({}, "get_blame_output", two_commits),
+				get_commit_message = stub({}, "get_commit_message", function(_, commit)
+					return { "commit " .. commit }
+				end),
+			}
+		end)
+
+		it("toggles the commit message of the cursor line in a panel below both windows", function()
+			local blame_view = BlameView:new({ git_instance = mock_git })
+			blame_view:mount()
+			vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
+
+			blame_view:toggle_commit_message()
+
+			local panel = blame_view.commit_panel
+			assert.are.same({
+				"col",
+				{
+					{ "row", { { "leaf", blame_view.blame_winid }, { "leaf", blame_view.file_winid } } },
+					{ "leaf", panel.winid },
+				},
+			}, vim.fn.winlayout())
+			assert.are.same(
+				{ "commit 1111111111111111111111111111111111111111" },
+				vim.api.nvim_buf_get_lines(panel.bufnr, 0, -1, false)
+			)
+			assert.are.equal(blame_view.blame_winid, vim.api.nvim_get_current_win())
+
+			blame_view:toggle_commit_message()
+
+			assert.is_false(panel:is_open())
+			assert.are.same(
+				{ blame_view.blame_winid, blame_view.file_winid },
+				vim.api.nvim_tabpage_list_wins(blame_view.tabpage)
+			)
+
+			blame_view:close()
+		end)
+
+		it("follows the cursor to the commit of another line", function()
+			local blame_view = BlameView:new({ git_instance = mock_git })
+			blame_view:mount()
+			vim.api.nvim_set_current_win(blame_view.file_winid)
+			vim.api.nvim_win_set_cursor(blame_view.file_winid, { 1, 0 })
+			blame_view:toggle_commit_message()
+
+			vim.api.nvim_win_set_cursor(blame_view.file_winid, { 2, 0 })
+			vim.api.nvim_exec_autocmds("CursorMoved", { buffer = blame_view.file_bufnr })
+
+			assert.are.same(
+				{ "commit 2222222222222222222222222222222222222222" },
+				vim.api.nvim_buf_get_lines(blame_view.commit_panel.bufnr, 0, -1, false)
+			)
+
+			blame_view:close()
+		end)
+
+		it("shows the commit message of the cursor line after navigating", function()
+			local blame_view = BlameView:new({ git_instance = mock_git })
+			blame_view:mount()
+			vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
+			blame_view:toggle_commit_message()
+			mock_git.get_blame_output = stub({}, "get_blame_output", function(_, commit_info)
+				return commit_info and blame_output_with_lines(1) or two_commits
+			end)
+
+			blame_view:navigate_forward()
+
+			assert.are.same(
+				{ "commit abcdef1234567890" },
+				vim.api.nvim_buf_get_lines(blame_view.commit_panel.bufnr, 0, -1, false)
+			)
+
+			blame_view:navigate_backward()
+
+			assert.are.same(
+				{ "commit 1111111111111111111111111111111111111111" },
+				vim.api.nvim_buf_get_lines(blame_view.commit_panel.bufnr, 0, -1, false)
+			)
+
+			blame_view:close()
+		end)
+
+		it("keeps the view open when the commit panel is closed", function()
+			local blame_view = BlameView:new({ git_instance = mock_git })
+			blame_view:mount()
+			blame_view:toggle_commit_message()
+
+			vim.cmd("pclose")
+			vim.wait(100, function()
+				return false
+			end)
+
+			assert.is_true(vim.api.nvim_tabpage_is_valid(blame_view.tabpage))
+			assert.are.same(
+				{ blame_view.blame_winid, blame_view.file_winid },
+				vim.api.nvim_tabpage_list_wins(blame_view.tabpage)
+			)
+
+			blame_view:close()
+		end)
 	end)
 end)

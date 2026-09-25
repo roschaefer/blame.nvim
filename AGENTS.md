@@ -70,6 +70,7 @@ Before submitting changes, ensure all Lua files pass diagnostics:
 *   `lua/blame/git.lua`: Contains utility functions for interacting with Git (blame, show, find root).
 *   `lua/blame/blame_view.lua`: Manages the creation and updates of the UI (blame and file content).
 *   `lua/blame/parser.lua`: Responsible for parsing the `git blame --line-porcelain` output.
+*   `lua/blame/commit_panel.lua`: Manages the on-demand panel with the commit message of the cursor line.
 *   `lua/blame/breadcrumb.lua`: Implements the stack-based commit history navigation logic.
 *   `lua/blame/utils.lua`: Provides helper functions for window and cursor synchronization.
 *   `scripts/run`: Helper script to launch an isolated Neovim instance with lazy.nvim and blame.nvim activated.

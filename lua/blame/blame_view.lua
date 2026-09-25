@@ -3,16 +3,8 @@ BlameView.__index = BlameView
 
 local parser = require("blame.parser")
 local Breadcrumb = require("blame.breadcrumb")
+local CommitPanel = require("blame.commit_panel")
 local utils = require("blame.utils")
-
---- Creates a read-only scratch buffer that is wiped as soon as it is no longer displayed.
---- @return number bufnr
-local function create_scratch_buffer()
-	local bufnr = vim.api.nvim_create_buf(false, true)
-	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = bufnr })
-	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
-	return bufnr
-end
 
 --- Sets the title of a window, escaping `%` for 'winbar'.
 --- The title is never empty, because windows without a winbar would be misaligned by one row.
@@ -23,15 +15,6 @@ local function set_title(winid, title)
 		local winbar = " " .. title:gsub("%%", "%%%%")
 		vim.api.nvim_set_option_value("winbar", winbar, { scope = "local", win = winid })
 	end
-end
-
---- Writes lines into a read-only buffer.
---- @param bufnr number
---- @param lines string[]
-local function set_lines(bufnr, lines)
-	vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
-	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
-	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
 end
 
 --- Highlights the syntax of a buffer without setting its 'filetype'.
@@ -58,8 +41,8 @@ end
 function BlameView:new(dependencies)
 	local instance = {
 		git_instance = dependencies.git_instance,
-		blame_bufnr = create_scratch_buffer(),
-		file_bufnr = create_scratch_buffer(),
+		blame_bufnr = utils.create_scratch_buffer(),
+		file_bufnr = utils.create_scratch_buffer(),
 		blame_winid = nil,
 		file_winid = nil,
 		tabpage = nil,
@@ -67,6 +50,7 @@ function BlameView:new(dependencies)
 		augroup = nil,
 		ns_id = vim.api.nvim_create_namespace("blame"),
 		breadcrumb = Breadcrumb:new(),
+		commit_panel = CommitPanel:new({ git_instance = dependencies.git_instance }),
 		blame_lines = {},
 	}
 
@@ -82,6 +66,7 @@ function BlameView:mount()
 	if not blame_output then
 		vim.api.nvim_buf_delete(self.blame_bufnr, { force = true })
 		vim.api.nvim_buf_delete(self.file_bufnr, { force = true })
+		self.commit_panel:destroy()
 		return false
 	end
 
@@ -136,6 +121,20 @@ function BlameView:mount()
 			end)
 		end,
 	})
+	vim.api.nvim_create_autocmd("CursorMoved", {
+		group = self.augroup,
+		buffer = self.blame_bufnr,
+		callback = function()
+			self:show_commit_message()
+		end,
+	})
+	vim.api.nvim_create_autocmd("CursorMoved", {
+		group = self.augroup,
+		buffer = self.file_bufnr,
+		callback = function()
+			self:show_commit_message()
+		end,
+	})
 	return true
 end
 
@@ -182,8 +181,8 @@ function BlameView:update_view(commit_info, blame_output)
 		file_content[i] = line.line_content
 	end
 
-	set_lines(self.blame_bufnr, blame_content)
-	set_lines(self.file_bufnr, file_content)
+	utils.set_lines(self.blame_bufnr, blame_content)
+	utils.set_lines(self.file_bufnr, file_content)
 
 	vim.api.nvim_buf_clear_namespace(self.blame_bufnr, self.ns_id, 0, -1)
 	for i, highlight_group in pairs(commit_highlights) do
@@ -226,6 +225,33 @@ function BlameView:enforce_view_options()
 	end
 end
 
+--- Returns the blame information of the cursor line.
+--- @return table|nil
+function BlameView:get_cursor_line()
+	-- Both windows have the same cursor row, but the current window may be another one, e.g. the commit panel
+	local winid = vim.api.nvim_get_current_win()
+	if winid ~= self.blame_winid then
+		winid = self.file_winid
+	end
+	return self.blame_lines[vim.api.nvim_win_get_cursor(winid)[1]]
+end
+
+--- Opens or closes the panel with the commit message of the cursor line.
+function BlameView:toggle_commit_message()
+	local line = self:get_cursor_line()
+	if line then
+		self.commit_panel:toggle(line.header.commit)
+	end
+end
+
+--- Shows the commit message of the cursor line, if the commit panel is open.
+function BlameView:show_commit_message()
+	local line = self:get_cursor_line()
+	if line then
+		self.commit_panel:show(line.header.commit)
+	end
+end
+
 --- Moves the cursor in both windows to the same position and re-aligns their scroll views.
 --- @param cursor_pos table {row, col}
 function BlameView:set_cursor(cursor_pos)
@@ -262,6 +288,7 @@ function BlameView:navigate_forward()
 		if commit_info and commit_info.header and commit_info.header.source_line then
 			self:set_cursor({ commit_info.header.source_line, 0 })
 		end
+		self:show_commit_message()
 	end
 end
 
@@ -280,6 +307,7 @@ function BlameView:navigate_backward()
 	if current.cursor_pos then
 		self:set_cursor(current.cursor_pos)
 	end
+	self:show_commit_message()
 end
 
 --- Closes the view and returns to the tab page it was opened from.
@@ -303,6 +331,7 @@ function BlameView:close(return_to_previous_tabpage)
 		vim.cmd("tabclose " .. vim.api.nvim_tabpage_get_number(self.tabpage))
 	end
 	self.tabpage = nil
+	self.commit_panel:destroy()
 
 	-- `:tabclose` moves to the tab page on the right, not to the one the view was opened from
 	if
