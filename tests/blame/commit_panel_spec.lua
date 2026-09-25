@@ -29,7 +29,6 @@ describe("blame.commit_panel", function()
 		assert.is_true(panel:is_open())
 		assert.are.equal(current_winid, vim.api.nvim_get_current_win())
 		assert.are.same({ "col", { { "leaf", current_winid }, { "leaf", panel.winid } } }, vim.fn.winlayout())
-		assert.are.equal(10, vim.api.nvim_win_get_height(panel.winid))
 		assert.are.same(
 			{ "commit abc123", "", "    Subject of abc123" },
 			vim.api.nvim_buf_get_lines(panel.bufnr, 0, -1, false)
@@ -39,6 +38,28 @@ describe("blame.commit_panel", function()
 
 		panel:destroy()
 	end)
+
+	it(
+		"keeps its height when the cursor moves to a commit with a shorter message, so the windows above do not jump",
+		function()
+			mock_git.get_commit_message = stub({}, "get_commit_message", function(_, commit)
+				if commit == "long" then
+					return vim.split(string.rep("line\n", 15), "\n", { trimempty = true })
+				end
+				return { "commit " .. commit }
+			end)
+			local panel = CommitPanel:new({ git_instance = mock_git })
+			panel:open("long")
+			assert.are.equal(10, vim.api.nvim_win_get_height(panel.winid))
+
+			panel:show("short")
+
+			assert.are.equal(10, vim.api.nvim_win_get_height(panel.winid))
+			assert.is_true(vim.wo[panel.winid].winfixheight)
+
+			panel:destroy()
+		end
+	)
 
 	it("does not take over the scroll binding and winbar of the current window", function()
 		vim.wo.scrollbind = true
@@ -172,17 +193,24 @@ describe("blame.commit_panel", function()
 		panel:destroy()
 	end)
 
-	it("runs git again for a commit whose message it failed to get", function()
-		mock_git.get_commit_message = stub({}, "get_commit_message", nil)
-		local panel = CommitPanel:new({ git_instance = mock_git })
-		panel:open("abc123")
-		assert.are.same({ "" }, vim.api.nvim_buf_get_lines(panel.bufnr, 0, -1, false))
+	it(
+		"runs git again for a commit whose message it failed to get once another commit was shown, not on every cursor move",
+		function()
+			mock_git.get_commit_message = stub({}, "get_commit_message", nil)
+			local panel = CommitPanel:new({ git_instance = mock_git })
+			panel:open("abc123")
+			assert.are.same({ "" }, vim.api.nvim_buf_get_lines(panel.bufnr, 0, -1, false))
 
-		panel:show("def456")
-		panel:show("abc123")
+			panel:show("abc123")
+			panel:show("abc123")
+			assert.stub(mock_git.get_commit_message).was.called(1)
 
-		assert.stub(mock_git.get_commit_message).was.called(3)
+			panel:show("def456")
+			panel:show("abc123")
 
-		panel:destroy()
-	end)
+			assert.stub(mock_git.get_commit_message).was.called(3)
+
+			panel:destroy()
+		end
+	)
 end)
