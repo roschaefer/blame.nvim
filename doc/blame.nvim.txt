@@ -1,5 +1,5 @@
 *blame.nvim.txt*                                               blame.nvim docs
-                                  For Neovim    Last change: 2026 September 24
+                                  For Neovim    Last change: 2026 September 25
 
 ==============================================================================
 Table of Contents                               *blame.nvim-table-of-contents*
