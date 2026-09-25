@@ -79,27 +79,33 @@ describe("blame.commit_panel", function()
 		vim.wo.winbar = ""
 	end)
 
-	it("opens even if there already is a preview window", function()
-		vim.cmd("pedit README.md")
+	it("is not a preview window, so preview commands like `:pedit` and `:pclose` leave it alone", function()
 		local panel = CommitPanel:new({ git_instance = mock_git })
-
 		panel:open("abc123")
 
-		assert.is_true(panel:is_open())
-		assert.is_false(vim.wo[panel.winid].previewwindow)
+		vim.cmd("pedit README.md")
 
-		panel:close()
+		assert.is_false(vim.wo[panel.winid].previewwindow)
+		assert.are.equal(panel.bufnr, vim.api.nvim_win_get_buf(panel.winid))
+
 		vim.cmd("pclose")
+
+		assert.is_true(panel:is_open())
+
+		panel:destroy()
 		vim.cmd("bwipeout README.md")
 	end)
 
-	it("closes with the commands for the preview window", function()
+	it("closes with `:quit` from inside", function()
 		local panel = CommitPanel:new({ git_instance = mock_git })
 		panel:open("abc123")
+		vim.api.nvim_set_current_win(panel.winid)
 
-		vim.cmd("pclose")
+		vim.cmd("quit")
 
 		assert.is_false(panel:is_open())
+
+		panel:destroy()
 	end)
 
 	it("returns the cursor to the window it came from when it is closed from inside", function()

@@ -642,7 +642,8 @@ describe("blame.blame_view", function()
 			blame_view:mount()
 			blame_view:toggle_commit_message()
 
-			vim.cmd("pclose")
+			vim.api.nvim_set_current_win(blame_view.commit_panel.winid)
+			vim.cmd("quit")
 			vim.wait(100, function()
 				return false
 			end)

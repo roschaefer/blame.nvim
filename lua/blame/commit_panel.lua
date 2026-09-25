@@ -55,11 +55,6 @@ function CommitPanel:open(commit)
 		wo.diff = false
 		wo.winfixbuf = true
 		wo.winfixheight = true
-		-- Standard commands for the preview window, like `<C-w>z` and `:pclose`, close the panel.
-		-- Fails if the tab page already has a preview window, e.g. from `:pedit`.
-		pcall(function()
-			wo.previewwindow = true
-		end)
 	end
 	self:show(commit)
 end

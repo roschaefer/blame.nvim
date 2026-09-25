@@ -38,7 +38,7 @@ Navigate through the commit history:
 * Press `<C-o>` (or `<C-t>`, `<BS>`) to go back to the previous commit in the history.
 * Both work in the blame window and in the file content window, similar to following a tag with `<C-]>` and popping the tag stack with `<C-t>`.
 * Switch between the blame window and the file content window with the usual window commands, e.g. `<C-w>h` and `<C-w>l`.
-* Press `K` to open or close a panel at the bottom with the full commit message, author and date of the cursor line. It follows the cursor while it is open. Pressing `K` inside the panel closes it and returns to the window you came from, `q` closes the whole view. It is a preview window, so `<C-w>z` and `:pclose` close it as well.
+* Press `K` to open or close a panel at the bottom with the full commit message, author and date of the cursor line. It follows the cursor while it is open. Pressing `K` inside the panel closes it and returns to the window you came from, `q` closes the whole view. `:q` inside the panel closes only the panel.
 * Press `q` or `<C-c>` to close the blame view. Closing the blame or the file content window (e.g. `:q`) closes the whole view.
 
 Both buffers are read-only, but you can select and yank text as usual, e.g. `yiw` on a commit hash.
