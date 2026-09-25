@@ -66,11 +66,52 @@ describe("blame.init", function()
 				return keymap.lhs
 			end, vim.api.nvim_buf_get_keymap(vim.api.nvim_win_get_buf(win), "n"))
 			table.sort(mapped_keys)
-			assert.are.same({ "<BS>", "<C-C>", "<C-O>", "<C-T>", "<C-]>", "<CR>", "q" }, mapped_keys)
+			assert.are.same({ "<BS>", "<C-C>", "<C-O>", "<C-T>", "<C-]>", "<CR>", "K", "q" }, mapped_keys)
 		end
+		vim.api.nvim_feedkeys("K", "x", false)
+		local panel_winid = vim.api.nvim_tabpage_list_wins(0)[3]
+		local panel_keys = vim.tbl_map(function(keymap)
+			return keymap.lhs
+		end, vim.api.nvim_buf_get_keymap(vim.api.nvim_win_get_buf(panel_winid), "n"))
+		table.sort(panel_keys)
+		assert.are.same({ "<C-C>", "K", "q" }, panel_keys)
 
 		vim.api.nvim_feedkeys("q", "x", false)
 		assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+		vim.cmd("bwipeout README.md")
+	end)
+
+	it("closes the commit panel with its toggle key from inside and returns to the previous window", function()
+		blame.setup({})
+		vim.cmd("edit README.md")
+		local original_tabpage = vim.api.nvim_get_current_tabpage()
+		blame.show_blame_info()
+		local blame_winid = vim.api.nvim_get_current_win()
+
+		vim.api.nvim_feedkeys("K", "x", false)
+		vim.api.nvim_feedkeys(vim.keycode("<C-w>j"), "x", false)
+		assert.are.equal("git", vim.bo.filetype)
+		vim.api.nvim_feedkeys("K", "x", false)
+
+		assert.are.equal(2, #vim.api.nvim_tabpage_list_wins(0))
+		assert.are.equal(blame_winid, vim.api.nvim_get_current_win())
+
+		vim.api.nvim_feedkeys("q", "x", false)
+		assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+		vim.cmd("bwipeout README.md")
+	end)
+
+	it("closes the whole view with the close key from inside the commit panel", function()
+		blame.setup({})
+		vim.cmd("edit README.md")
+		local original_tabpage = vim.api.nvim_get_current_tabpage()
+		blame.show_blame_info()
+		vim.api.nvim_feedkeys("K", "x", false)
+		vim.api.nvim_feedkeys(vim.keycode("<C-w>j"), "x", false)
+
+		vim.api.nvim_feedkeys("q", "x", false)
+
+		assert.are.same({ original_tabpage }, vim.api.nvim_list_tabpages())
 		vim.cmd("bwipeout README.md")
 	end)
 

@@ -169,4 +169,26 @@ describe("blame.utils: integrates with real Neovim windows", function()
 		assert.are.equal(1, vim.fn.maparg("q", "n", false, true).buffer)
 		assert.are.same({}, vim.api.nvim_buf_get_keymap(original_buf_id, "n"))
 	end)
+
+	it("creates a read-only scratch buffer that is wiped when it is no longer displayed", function()
+		local bufnr = utils.create_scratch_buffer()
+
+		assert.are.equal("nofile", vim.bo[bufnr].buftype)
+		assert.are.equal("wipe", vim.bo[bufnr].bufhidden)
+		assert.is_false(vim.bo[bufnr].modifiable)
+
+		vim.api.nvim_buf_delete(bufnr, { force = true })
+	end)
+
+	it("replaces all lines of a read-only buffer and keeps it read-only", function()
+		local bufnr = utils.create_scratch_buffer()
+		utils.set_lines(bufnr, { "one", "two", "three" })
+
+		utils.set_lines(bufnr, { "four" })
+
+		assert.are.same({ "four" }, vim.api.nvim_buf_get_lines(bufnr, 0, -1, false))
+		assert.is_false(vim.bo[bufnr].modifiable)
+
+		vim.api.nvim_buf_delete(bufnr, { force = true })
+	end)
 end)

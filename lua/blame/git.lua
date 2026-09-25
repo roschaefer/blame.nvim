@@ -82,4 +82,18 @@ function Git:get_blame_output(commit_info)
 	return blame_result.stdout
 end
 
+--- Retrieves the commit message of a commit, together with its hash, author and date.
+--- @param commit string The commit hash.
+--- @return string[]|nil The lines of the commit message, or nil if an error occurred.
+function Git:get_commit_message(commit)
+	local show_cmd = { "git", "show", "--no-patch", "--no-show-signature", "--no-color", "--format=medium", commit }
+	local show_result = vim.system(show_cmd, { text = true, cwd = self.git_root }):wait()
+
+	if show_result.code ~= 0 then
+		vim.notify("blame.nvim: Git show command failed. Stderr: " .. (show_result.stderr or ""), vim.log.levels.WARN)
+		return nil
+	end
+	return vim.split(show_result.stdout, "\n", { trimempty = true })
+end
+
 return Git

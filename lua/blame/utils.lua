@@ -45,6 +45,24 @@ function M.set_cursor_to_line(win, line_num, col)
 	vim.api.nvim_win_set_cursor(win, { line_num, col or 0 })
 end
 
+--- Creates a read-only scratch buffer that is wiped as soon as it is no longer displayed.
+--- @return number bufnr
+function M.create_scratch_buffer()
+	local bufnr = vim.api.nvim_create_buf(false, true)
+	vim.api.nvim_set_option_value("bufhidden", "wipe", { buf = bufnr })
+	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
+	return bufnr
+end
+
+--- Writes lines into a read-only buffer.
+--- @param bufnr number
+--- @param lines string[]
+function M.set_lines(bufnr, lines)
+	vim.api.nvim_set_option_value("modifiable", true, { buf = bufnr })
+	vim.api.nvim_buf_set_lines(bufnr, 0, -1, false, lines)
+	vim.api.nvim_set_option_value("modifiable", false, { buf = bufnr })
+end
+
 --- Adds a normal mode keymap for one or many keys to a buffer.
 --- @param bufnr number The buffer handle.
 --- @param keys string|table The key or list of keys to map.
