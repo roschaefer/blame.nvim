@@ -5,7 +5,6 @@ local utils = require("blame.utils")
 
 -- A fixed height, so the windows above do not change their height whenever the cursor moves to another commit
 local HEIGHT = 10
-local UNCOMMITTED = string.rep("0", 40)
 
 function CommitPanel:new(dependencies)
 	local bufnr = utils.create_scratch_buffer()
@@ -108,7 +107,8 @@ end
 --- @param commit string The commit hash.
 --- @return string[]
 function CommitPanel:get_message(commit)
-	if commit == UNCOMMITTED then
+	-- Uncommitted lines have an all-zero hash, 40 characters long for SHA-1 and 64 for SHA-256
+	if commit:match("^0+$") then
 		return { "Not committed yet" }
 	end
 	if not self.messages[commit] then

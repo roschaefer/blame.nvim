@@ -86,7 +86,7 @@ end
 --- @param commit string The commit hash.
 --- @return string[]|nil The lines of the commit message, or nil if an error occurred.
 function Git:get_commit_message(commit)
-	local show_cmd = { "git", "show", "--no-patch", "--no-show-signature", "--format=medium", commit }
+	local show_cmd = { "git", "show", "--no-patch", "--no-show-signature", "--no-color", "--format=medium", commit }
 	local show_result = vim.system(show_cmd, { text = true, cwd = self.git_root }):wait()
 
 	if show_result.code ~= 0 then

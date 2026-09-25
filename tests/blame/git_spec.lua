@@ -125,6 +125,21 @@ describe("blame.git", function()
 			}, message)
 		end)
 
+		it("returns plain text even if the user config enables colors", function()
+			assert(git)
+			vim.env.GIT_CONFIG_COUNT = "1"
+			vim.env.GIT_CONFIG_KEY_0 = "color.ui"
+			vim.env.GIT_CONFIG_VALUE_0 = "always"
+
+			local message = git:get_commit_message("HEAD")
+
+			vim.env.GIT_CONFIG_COUNT = nil
+			vim.env.GIT_CONFIG_KEY_0 = nil
+			vim.env.GIT_CONFIG_VALUE_0 = nil
+			assert(message)
+			assert.are.equal("commit a91719acddede54654abd65439ae1535ad22819c", message[1])
+		end)
+
 		it("returns nil and shows a warning if the commit does not exist", function()
 			assert(git)
 			local notify_stub = stub(vim, "notify")

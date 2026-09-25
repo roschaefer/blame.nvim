@@ -193,6 +193,17 @@ describe("blame.commit_panel", function()
 		panel:destroy()
 	end)
 
+	it("shows uncommitted changes of repositories with SHA-256 hashes without running git", function()
+		local panel = CommitPanel:new({ git_instance = mock_git })
+
+		panel:open(string.rep("0", 64))
+
+		assert.are.same({ "Not committed yet" }, vim.api.nvim_buf_get_lines(panel.bufnr, 0, -1, false))
+		assert.stub(mock_git.get_commit_message).was.called(0)
+
+		panel:destroy()
+	end)
+
 	it(
 		"runs git again for a commit whose message it failed to get once another commit was shown, not on every cursor move",
 		function()
