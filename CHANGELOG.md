@@ -1,5 +1,12 @@
 # Changelog
 
+## [2.1.0](https://github.com/roschaefer/blame.nvim/compare/v2.0.0...v2.1.0) (2026-09-26)
+
+
+### Features
+
+* **view:** show the commit message of the cursor line on demand ([#52](https://github.com/roschaefer/blame.nvim/issues/52)) ([4d7162a](https://github.com/roschaefer/blame.nvim/commit/4d7162a52885a9974d4e9a99390f90d840f1c6f7)), closes [#13](https://github.com/roschaefer/blame.nvim/issues/13)
+
 ## [2.0.0](https://github.com/roschaefer/blame.nvim/compare/v1.2.0...v2.0.0) (2026-09-24)
 
 
