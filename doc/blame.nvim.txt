@@ -1,5 +1,5 @@
 *blame.nvim.txt*                                               blame.nvim docs
-                                  For Neovim    Last change: 2026 September 25
+                                  For Neovim    Last change: 2026 September 26
 
 ==============================================================================
 Table of Contents                               *blame.nvim-table-of-contents*
@@ -115,6 +115,18 @@ clients and other filetype plugins do not run there.
 
 
 DEVELOPMENT                                *blame.nvim-blame.nvim-development*
+
+The development tools (Neovim, git, stylua, lua-language-server and llscheck)
+are provided by a Nix <https://nixos.org> dev shell:
+
+>bash
+    nix develop
+<
+
+`nix develop` starts bash. To keep your shell, run e.g. `nix develop --command
+fish`, or use direnv <https://direnv.net> with `use flake`. The scripts below
+work the same with tools installed in any other way, as long as they are on
+your `PATH`.
 
 To start Neovim with `lazy.nvim` and only this plugin activated:
 
