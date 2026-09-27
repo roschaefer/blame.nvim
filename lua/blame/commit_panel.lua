@@ -53,7 +53,6 @@ function CommitPanel:open(commit)
 		wo.foldcolumn = "0"
 		wo.colorcolumn = ""
 		wo.diff = false
-		wo.winfixbuf = true
 		wo.winfixheight = true
 	end
 	self:show(commit)

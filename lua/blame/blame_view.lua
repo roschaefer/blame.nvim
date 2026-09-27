@@ -52,6 +52,8 @@ function BlameView:new(dependencies)
 		breadcrumb = Breadcrumb:new(),
 		commit_panel = CommitPanel:new({ git_instance = dependencies.git_instance }),
 		blame_lines = {},
+		closed_in_view = nil,
+		check_windows_scheduled = false,
 	}
 
 	setmetatable(instance, BlameView)
@@ -107,18 +109,24 @@ function BlameView:mount()
 	utils.initialize_cursor_position(current_file_win, self.blame_winid)
 	utils.initialize_cursor_position(current_file_win, self.file_winid)
 
-	-- Closing one of the two windows (e.g. with `:q`) closes the whole view
+	-- Closing a window of the view or opening another buffer in it, e.g. from a file explorer, leaves the view.
+	-- Both only queue a check of the resulting windows, so the order of the events does not matter.
 	self.augroup = vim.api.nvim_create_augroup("blame_view_" .. self.tabpage, { clear = true })
 	vim.api.nvim_create_autocmd("WinClosed", {
 		group = self.augroup,
 		pattern = { tostring(self.blame_winid), tostring(self.file_winid) },
-		once = true,
 		callback = function()
-			-- Checked right away, because Neovim switches to another tab page before the scheduled close
-			local closed_in_view = vim.api.nvim_get_current_tabpage() == self.tabpage
-			vim.schedule(function()
-				self:close(closed_in_view)
-			end)
+			-- Checked right away, because Neovim switches to another tab page before the scheduled check
+			self.closed_in_view = self.closed_in_view or vim.api.nvim_get_current_tabpage() == self.tabpage
+			self:schedule_check_windows()
+		end,
+	})
+	vim.api.nvim_create_autocmd("BufWinEnter", {
+		group = self.augroup,
+		callback = function()
+			if self:view_windows()[vim.api.nvim_get_current_win()] then
+				self:schedule_check_windows()
+			end
 		end,
 	})
 	vim.api.nvim_create_autocmd("CursorMoved", {
@@ -219,8 +227,6 @@ function BlameView:enforce_view_options()
 			wo.foldenable = false
 			-- Diff mode adds filler lines, e.g. when `:Blame` is run from a diff window
 			wo.diff = false
-			-- Keeps e.g. <C-o> from replacing the blame or file buffer
-			wo.winfixbuf = true
 		end
 	end
 end
@@ -308,6 +314,85 @@ function BlameView:navigate_backward()
 		self:set_cursor(current.cursor_pos)
 	end
 	self:show_commit_message()
+end
+
+--- Returns the windows of the view, each with the buffer it shows as long as it is part of the view.
+--- @return table<number, number> bufnr by winid
+function BlameView:view_windows()
+	local windows = {
+		[self.blame_winid] = self.blame_bufnr,
+		[self.file_winid] = self.file_bufnr,
+	}
+	if self.commit_panel.winid then
+		windows[self.commit_panel.winid] = self.commit_panel.bufnr
+	end
+	return windows
+end
+
+--- @param bufnr number
+--- @return boolean
+function BlameView:is_view_buffer(bufnr)
+	return bufnr == self.blame_bufnr or bufnr == self.file_bufnr or bufnr == self.commit_panel.bufnr
+end
+
+--- Checks the windows of the view once the current events are handled. Scheduled, because closing windows
+--- while e.g. a file explorer still opens a buffer confuses it, and because a single command can close a window
+--- and open a buffer in another one.
+function BlameView:schedule_check_windows()
+	if self.check_windows_scheduled then
+		return
+	end
+	self.check_windows_scheduled = true
+	vim.schedule(function()
+		self.check_windows_scheduled = false
+		self:check_windows()
+	end)
+end
+
+--- Leaves the view if its windows no longer show their own buffers. Windows that show other buffers, e.g. a file
+--- opened from an explorer, are handed over. Otherwise, a closed window or a buffer of the view in the wrong window,
+--- e.g. after `:buffer`, closes the whole view.
+function BlameView:check_windows()
+	if not self.tabpage then
+		return
+	end
+	local broken = false
+	for winid, bufnr in pairs(self:view_windows()) do
+		if not vim.api.nvim_win_is_valid(winid) then
+			-- The commit panel can be closed on its own
+			broken = broken or winid ~= self.commit_panel.winid
+		else
+			local shown_bufnr = vim.api.nvim_win_get_buf(winid)
+			if not self:is_view_buffer(shown_bufnr) then
+				self:release()
+				return
+			end
+			broken = broken or shown_bufnr ~= bufnr
+		end
+	end
+	if broken then
+		self:close(self.closed_in_view)
+	end
+end
+
+--- Closes the view, except for its windows that show other buffers now, which become normal windows.
+--- The tab page stays, e.g. with the file explorer the buffers were opened from.
+function BlameView:release()
+	if self.augroup then
+		vim.api.nvim_del_augroup_by_id(self.augroup)
+		self.augroup = nil
+	end
+	for winid in pairs(self:view_windows()) do
+		if vim.api.nvim_win_is_valid(winid) then
+			if self:is_view_buffer(vim.api.nvim_win_get_buf(winid)) then
+				vim.api.nvim_win_close(winid, true)
+			elseif winid == self.commit_panel.winid then
+				self.commit_panel.winid = nil
+			end
+		end
+	end
+	self.commit_panel:destroy()
+	self.tabpage = nil
 end
 
 --- Closes the view and returns to the tab page it was opened from.

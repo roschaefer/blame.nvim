@@ -40,6 +40,7 @@ Navigate through the commit history:
 * Switch between the blame window and the file content window with the usual window commands, e.g. `<C-w>h` and `<C-w>l`.
 * Press `K` to open or close a panel at the bottom with the full commit message, author and date of the cursor line. It follows the cursor while it is open. Pressing `K` inside the panel closes it and returns to the window you came from, `q` closes the whole view. `:q` inside the panel closes only the panel.
 * Press `q` or `<C-c>` to close the blame view. Closing the blame or the file content window (e.g. `:q`) closes the whole view.
+* Opening another file in one of the windows of the view, e.g. from a file explorer, closes the rest of the view. The file stays open in that window.
 
 Both buffers are read-only, but you can select and yank text as usual, e.g. `yiw` on a commit hash.
 
@@ -77,7 +78,7 @@ vim.opt_local.cursorline = false
 
 Buffer-local keymaps defined there take precedence over the keymaps of `blame.nvim`.
 
-The view always sets these options in both windows, because it needs them to keep the lines of both windows aligned: `scrollbind`, `cursorbind`, `nowrap`, `nofoldenable`, `nodiff` and `winfixbuf`.
+The view always sets these options in both windows, because it needs them to keep the lines of both windows aligned: `scrollbind`, `cursorbind`, `nowrap`, `nofoldenable` and `nodiff`.
 
 The commit message panel has the filetype `git`.
 

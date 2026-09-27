@@ -173,8 +173,6 @@ describe("blame.blame_view", function()
 		assert.are.equal(" Working tree", vim.wo[blame_view.blame_winid].winbar)
 		assert.are.equal(" file.lua", vim.wo[blame_view.file_winid].winbar)
 		assert.are.equal("blame", vim.bo[blame_view.blame_bufnr].filetype)
-		assert.is_true(vim.wo[blame_view.blame_winid].winfixbuf)
-		assert.is_true(vim.wo[blame_view.file_winid].winfixbuf)
 		assert.spy(utils_initialize_cursor_position_spy).was.called(2)
 		assert.are.equal(1, #blame_view.breadcrumb.stack)
 		assert.is_nil(blame_view.breadcrumb:current().commit_info)
@@ -246,7 +244,7 @@ describe("blame.blame_view", function()
 		vim.api.nvim_create_autocmd("FileType", {
 			group = augroup,
 			pattern = "blame",
-			command = "setlocal number nocursorline wrap foldenable noscrollbind nocursorbind nowinfixbuf",
+			command = "setlocal number nocursorline wrap foldenable noscrollbind nocursorbind",
 		})
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
@@ -264,7 +262,6 @@ describe("blame.blame_view", function()
 		assert.is_false(wo.foldenable)
 		assert.is_true(wo.scrollbind)
 		assert.is_true(wo.cursorbind)
-		assert.is_true(wo.winfixbuf)
 
 		blame_view:close()
 		vim.api.nvim_del_augroup_by_id(augroup)
@@ -354,6 +351,153 @@ describe("blame.blame_view", function()
 		assert.are.equal(other_tabpage, vim.api.nvim_get_current_tabpage())
 
 		vim.cmd("tabclose")
+	end)
+
+	describe("another buffer opened in one of its windows, e.g. from a file explorer", function()
+		local blame_view
+		local other_bufnr
+		local view_tabpage
+
+		before_each(function()
+			blame_view = BlameView:new({
+				git_instance = {
+					original_file = "/path/to/repo/file.lua",
+					git_root = "/path/to/repo",
+					get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
+					get_commit_message = stub({}, "get_commit_message", { "commit message" }),
+				},
+			})
+			blame_view:mount()
+			view_tabpage = blame_view.tabpage
+			other_bufnr = vim.api.nvim_create_buf(true, false)
+		end)
+
+		after_each(function()
+			blame_view:close()
+			-- The tab page stays after the view is released
+			if vim.api.nvim_tabpage_is_valid(view_tabpage) then
+				vim.cmd("tabclose! " .. vim.api.nvim_tabpage_get_number(view_tabpage))
+			end
+			if vim.api.nvim_buf_is_valid(other_bufnr) then
+				vim.api.nvim_buf_delete(other_bufnr, { force = true })
+			end
+		end)
+
+		local function open_in(winid, bufnr)
+			vim.api.nvim_set_current_win(winid)
+			vim.api.nvim_win_set_buf(winid, bufnr or other_bufnr)
+		end
+
+		local function wait_for_release()
+			vim.wait(100, function()
+				return blame_view.tabpage == nil
+			end)
+		end
+
+		it("closes the rest of the view and keeps the window with the buffer in the tab page", function()
+			local tabpage = blame_view.tabpage
+			local file_winid = blame_view.file_winid
+
+			open_in(file_winid)
+			wait_for_release()
+
+			assert.are.same({ file_winid }, vim.api.nvim_tabpage_list_wins(tabpage))
+			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(file_winid))
+			assert.are.equal(tabpage, vim.api.nvim_get_current_tabpage())
+			assert.is_false(vim.api.nvim_buf_is_valid(blame_view.blame_bufnr))
+			assert.is_false(vim.api.nvim_buf_is_valid(blame_view.file_bufnr))
+		end)
+
+		it("does not take over the options of the view for the buffer", function()
+			local blame_winid = blame_view.blame_winid
+
+			open_in(blame_winid)
+			wait_for_release()
+
+			local wo = vim.wo[blame_winid]
+			assert.is_false(wo.scrollbind)
+			assert.is_false(wo.cursorbind)
+			assert.are.equal("", wo.winbar)
+		end)
+
+		it("keeps every window that shows another buffer, e.g. when a plugin opens buffers in two of them", function()
+			local second_bufnr = vim.api.nvim_create_buf(true, false)
+			local blame_winid = blame_view.blame_winid
+			local file_winid = blame_view.file_winid
+
+			open_in(blame_winid)
+			open_in(file_winid, second_bufnr)
+			wait_for_release()
+
+			assert.are.same({ blame_winid, file_winid }, vim.api.nvim_tabpage_list_wins(0))
+			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(blame_winid))
+			assert.are.equal(second_bufnr, vim.api.nvim_win_get_buf(file_winid))
+			vim.api.nvim_buf_delete(second_bufnr, { force = true })
+		end)
+
+		it("closes the whole view when one of its windows shows the buffer of another one", function()
+			local original_tabpage = blame_view.previous_tabpage
+
+			vim.api.nvim_set_current_win(blame_view.blame_winid)
+			vim.cmd("buffer " .. blame_view.file_bufnr)
+			wait_for_release()
+
+			assert.is_false(vim.api.nvim_tabpage_is_valid(view_tabpage))
+			assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+			assert.is_false(vim.api.nvim_buf_is_valid(blame_view.file_bufnr))
+		end)
+
+		it("stays in the tab page when a buffer is opened right after a window of the view was closed", function()
+			local blame_winid = blame_view.blame_winid
+
+			vim.api.nvim_win_close(blame_view.file_winid, true)
+			open_in(blame_winid)
+			wait_for_release()
+			vim.wait(50, function()
+				return false
+			end)
+
+			assert.are.equal(view_tabpage, vim.api.nvim_get_current_tabpage())
+			assert.are.same({ blame_winid }, vim.api.nvim_tabpage_list_wins(0))
+			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(blame_winid))
+		end)
+
+		it("stays in the tab page when a window of the view is closed right after a buffer was opened", function()
+			local blame_winid = blame_view.blame_winid
+
+			open_in(blame_winid)
+			vim.api.nvim_win_close(blame_view.file_winid, true)
+			wait_for_release()
+			vim.wait(50, function()
+				return false
+			end)
+
+			assert.are.equal(view_tabpage, vim.api.nvim_get_current_tabpage())
+			assert.are.same({ blame_winid }, vim.api.nvim_tabpage_list_wins(0))
+			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(blame_winid))
+		end)
+
+		it("closes the commit panel, too", function()
+			blame_view:toggle_commit_message()
+			local panel_bufnr = blame_view.commit_panel.bufnr
+
+			open_in(blame_view.blame_winid)
+			wait_for_release()
+
+			assert.are.equal(1, #vim.api.nvim_tabpage_list_wins(0))
+			assert.is_false(vim.api.nvim_buf_is_valid(panel_bufnr))
+		end)
+
+		it("keeps the commit panel window if the buffer is opened there", function()
+			blame_view:toggle_commit_message()
+			local panel_winid = blame_view.commit_panel.winid
+
+			open_in(panel_winid)
+			wait_for_release()
+
+			assert.are.same({ panel_winid }, vim.api.nvim_tabpage_list_wins(0))
+			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(panel_winid))
+		end)
 	end)
 
 	it("closes the whole view when one of its windows is closed", function()
