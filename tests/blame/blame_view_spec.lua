@@ -5,12 +5,15 @@ local stub = require("luassert.stub")
 local spy = require("luassert.spy")
 local BlameView = require("blame.blame_view")
 
+local three_days_ago = os.time() - 3 * 24 * 60 * 60
+
 local function blame_output_with_lines(count)
 	local lines = {}
 	for i = 1, count do
 		table.insert(lines, string.format("abcdef1234567890 %d %d 1", i, i))
 		table.insert(lines, "author Test")
-		table.insert(lines, "author-time 123456789")
+		table.insert(lines, "author-time " .. three_days_ago)
+		table.insert(lines, "summary Subject")
 		table.insert(lines, "filename file.lua")
 		table.insert(lines, "\tline content " .. i)
 	end
@@ -54,7 +57,9 @@ describe("blame.blame_view", function()
 			get_blame_output = stub(
 				{},
 				"get_blame_output",
-				"abcdef1234567890 1 1 1\nauthor Test\nauthor-time 123456789\nfilename file.lua\n\tline content 1\nabcdef1234567890 2 2\n\tline content 2\n"
+				"abcdef1234567890 1 1 1\nauthor Test\nauthor-time "
+					.. three_days_ago
+					.. "\nsummary Subject\nfilename file.lua\n\tline content 1\nabcdef1234567890 2 2\n\tline content 2\n"
 			),
 		}
 
@@ -72,19 +77,81 @@ describe("blame.blame_view", function()
 
 		-- line 2 belongs to the same commit as line 1, so it is not annotated
 		local blame_content = vim.api.nvim_buf_get_lines(blame_view.blame_bufnr, 0, -1, false)
-		assert.are.same({ "abcdef12 Test (1973-11-29)", "" }, blame_content)
-
-		local extmarks =
-			vim.api.nvim_buf_get_extmarks(blame_view.blame_bufnr, blame_view.ns_id, 0, -1, { details = true })
-		assert.are.equal(1, #extmarks)
-		assert.are.equal("GitBlameCommit_abcdef1234567890", extmarks[1][4].hl_group)
-		assert.are.equal(8, extmarks[1][4].end_col)
+		assert.are.same({ "3 days ago Test Subject", "" }, blame_content)
 
 		assert.is_false(vim.bo[blame_view.blame_bufnr].modifiable)
 		assert.is_false(vim.bo[blame_view.file_bufnr].modifiable)
 		assert.are.equal("", vim.bo[blame_view.file_bufnr].filetype)
 		assert.are.equal("", vim.bo[blame_view.file_bufnr].syntax)
 		assert.is_not_nil(vim.treesitter.highlighter.active[blame_view.file_bufnr])
+	end)
+
+	describe("blame lines", function()
+		local day = 24 * 60 * 60
+		local two_authors = table.concat({
+			"1111111111111111111111111111111111111111 1 1 1",
+			"author Robert Schäfer",
+			"author-time " .. (os.time() - 400 * day),
+			"summary feat(view): show the commit subject in the blame window",
+			"filename file.lua",
+			"\tline content 1",
+			"2222222222222222222222222222222222222222 2 2 1",
+			"author Bot",
+			"author-time " .. (os.time() - 3 * day),
+			"summary fix: typo",
+			"filename file.lua",
+			"\tline content 2",
+		}, "\n")
+
+		local function mock_git()
+			return {
+				original_file = "/path/to/repo/file.lua",
+				git_root = "/path/to/repo",
+				get_blame_output = stub({}, "get_blame_output", two_authors),
+			}
+		end
+
+		it("shows the relative date, the author and the subject in aligned columns", function()
+			local blame_view = BlameView:new({ git_instance = mock_git() })
+
+			blame_view:update_view(nil)
+
+			assert.are.same({
+				"last year  Robert Schäfer feat(view): show the commit subject in the blame window",
+				"3 days ago Bot            fix: typo",
+			}, vim.api.nvim_buf_get_lines(blame_view.blame_bufnr, 0, -1, false))
+		end)
+
+		it("tells the columns apart with alternating colours, the date and the subject standing out", function()
+			local blame_view = BlameView:new({ git_instance = mock_git() })
+
+			blame_view:update_view(nil)
+
+			local highlights = vim.tbl_map(function(extmark)
+				return { extmark[2], extmark[3], extmark[4].end_col, extmark[4].hl_group }
+			end, vim.api.nvim_buf_get_extmarks(blame_view.blame_bufnr, blame_view.ns_id, 0, -1, { details = true }))
+			assert.are.same({
+				{ 0, 0, 9, "GitBlameDate" },
+				{ 0, 11, 26, "GitBlameAuthor" },
+				{ 0, 27, 82, "GitBlameSubject" },
+				{ 1, 0, 10, "GitBlameDate" },
+				{ 1, 11, 14, "GitBlameAuthor" },
+				{ 1, 26, 35, "GitBlameSubject" },
+			}, highlights)
+			assert.are.same({ link = "Normal", default = true }, vim.api.nvim_get_hl(0, { name = "GitBlameDate" }))
+			assert.are.same({ link = "Comment", default = true }, vim.api.nvim_get_hl(0, { name = "GitBlameAuthor" }))
+			assert.are.same({ link = "Normal", default = true }, vim.api.nvim_get_hl(0, { name = "GitBlameSubject" }))
+		end)
+
+		it("takes a third of the page, like GitHub's blame view", function()
+			local blame_view = BlameView:new({ git_instance = mock_git() })
+
+			blame_view:mount()
+
+			assert.are.equal(math.floor(vim.o.columns / 3), vim.api.nvim_win_get_width(blame_view.blame_winid))
+
+			blame_view:close()
+		end)
 	end)
 
 	it("falls back to regex syntax highlighting without a tree-sitter parser", function()
@@ -138,10 +205,7 @@ describe("blame.blame_view", function()
 		mock_git.get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(1))
 		blame_view:update_view(nil)
 
-		assert.are.same(
-			{ "abcdef12 Test (1973-11-29)" },
-			vim.api.nvim_buf_get_lines(blame_view.blame_bufnr, 0, -1, false)
-		)
+		assert.are.same({ "3 days ago Test Subject" }, vim.api.nvim_buf_get_lines(blame_view.blame_bufnr, 0, -1, false))
 		assert.are.same({ "line content 1" }, vim.api.nvim_buf_get_lines(blame_view.file_bufnr, 0, -1, false))
 	end)
 
@@ -536,8 +600,6 @@ describe("blame.blame_view", function()
 			{
 				header = { commit = "hash1", source_line = 42, result_line = 1 },
 				previous = { commit = "prev_hash", filename = "file.lua" },
-				author = "Test",
-				date = "2026-02-24",
 			},
 		}
 

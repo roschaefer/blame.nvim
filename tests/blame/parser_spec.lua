@@ -44,7 +44,6 @@ filename file.txt
 					summary = "Summary 1",
 					filename = "file.txt",
 					line_content = "Line 1 content",
-					date = "2023-01-01",
 				},
 				{
 					header = {
@@ -60,7 +59,6 @@ filename file.txt
 					summary = "Summary 1",
 					filename = "file.txt",
 					line_content = "Line 2 content",
-					date = "2023-01-01",
 				},
 				{
 					header = {
@@ -76,7 +74,6 @@ filename file.txt
 					summary = "Summary 2",
 					filename = "file.txt",
 					line_content = "Different line content",
-					date = "2023-02-15",
 				},
 			},
 		}
@@ -121,7 +118,6 @@ filename newfile.txt
 					summary = "",
 					filename = "newfile.txt",
 					line_content = "New line content",
-					date = "2024-01-01",
 				},
 				{
 					header = {
@@ -137,7 +133,6 @@ filename newfile.txt
 					summary = "",
 					filename = "newfile.txt",
 					line_content = "Another new line",
-					date = "2024-01-01",
 				},
 			},
 		}
@@ -178,7 +173,6 @@ author-time 1709283600
 					author = "Long Name With (Spaces)",
 					author_time = 1709283600,
 					line_content = "Some content",
-					date = "2024-03-01",
 				},
 			},
 		}
@@ -214,7 +208,6 @@ filename file.txt
 					author_time = 1672567200,
 					filename = "file.txt",
 					line_content = "Line 1 content",
-					date = "2023-01-01",
 				},
 				{
 					header = {
@@ -226,7 +219,6 @@ filename file.txt
 					author_time = 1672567200,
 					filename = "file.txt",
 					line_content = "Line 2 content",
-					date = "2023-01-01",
 				},
 			},
 		}
@@ -261,7 +253,6 @@ filename file.txt
 					},
 					filename = "file.txt",
 					line_content = "Line 1 content",
-					date = "2023-01-01",
 				},
 			},
 		}
