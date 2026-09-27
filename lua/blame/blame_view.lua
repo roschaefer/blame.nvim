@@ -117,7 +117,10 @@ function BlameView:mount()
 			-- Checked right away, because Neovim switches to another tab page before the scheduled close
 			local closed_in_view = vim.api.nvim_get_current_tabpage() == self.tabpage
 			vim.schedule(function()
-				self:close(closed_in_view)
+				-- Skipped if the view was handed over to other buffers in the meantime
+				if self.tabpage then
+					self:close(closed_in_view)
+				end
 			end)
 		end,
 	})
@@ -130,7 +133,13 @@ function BlameView:mount()
 				-- Scheduled, because closing windows while e.g. a file explorer still opens the buffer confuses it
 				vim.schedule(function()
 					-- The view may be gone already, e.g. when buffers were opened in two of its windows
-					if self.tabpage and self:shows_other_buffer(winid) then
+					if not (self.tabpage and self:shows_other_buffer(winid)) then
+						return
+					end
+					if self:is_view_buffer(vim.api.nvim_win_get_buf(winid)) then
+						-- E.g. the file content in the blame window after `:buffer`, which is no file to hand over
+						self:close()
+					else
 						self:release()
 					end
 				end)
@@ -345,6 +354,12 @@ function BlameView:shows_other_buffer(winid)
 	return bufnr ~= nil and vim.api.nvim_win_is_valid(winid) and vim.api.nvim_win_get_buf(winid) ~= bufnr
 end
 
+--- @param bufnr number
+--- @return boolean
+function BlameView:is_view_buffer(bufnr)
+	return bufnr == self.blame_bufnr or bufnr == self.file_bufnr or bufnr == self.commit_panel.bufnr
+end
+
 --- Closes the view, except for its windows that show other buffers now, which become normal windows.
 --- The tab page stays, e.g. with the file explorer the buffers were opened from.
 function BlameView:release()
@@ -353,9 +368,10 @@ function BlameView:release()
 		self.augroup = nil
 	end
 	for winid in pairs(self:view_windows()) do
-		if self:shows_other_buffer(winid) then
-			-- The only option of the view that belongs to the window, not to the buffer shown in it
+		if self:shows_other_buffer(winid) and not self:is_view_buffer(vim.api.nvim_win_get_buf(winid)) then
+			-- Unlike the other options of the view, these belong to the window, not to the buffer shown in it
 			vim.wo[winid].winfixwidth = false
+			vim.wo[winid].winfixheight = false
 			if winid == self.commit_panel.winid then
 				self.commit_panel.winid = nil
 			end

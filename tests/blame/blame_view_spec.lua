@@ -436,16 +436,31 @@ describe("blame.blame_view", function()
 			vim.api.nvim_buf_delete(second_bufnr, { force = true })
 		end)
 
-		it("closes the rest of the view when one of its windows shows the buffer of another one", function()
-			local blame_winid = blame_view.blame_winid
-			local file_bufnr = blame_view.file_bufnr
+		it("closes the whole view when one of its windows shows the buffer of another one", function()
+			local original_tabpage = blame_view.previous_tabpage
 
-			vim.api.nvim_set_current_win(blame_winid)
-			vim.cmd("buffer " .. file_bufnr)
+			vim.api.nvim_set_current_win(blame_view.blame_winid)
+			vim.cmd("buffer " .. blame_view.file_bufnr)
 			wait_for_release()
 
+			assert.is_false(vim.api.nvim_tabpage_is_valid(view_tabpage))
+			assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+			assert.is_false(vim.api.nvim_buf_is_valid(blame_view.file_bufnr))
+		end)
+
+		it("stays in the tab page when a window of the view is closed right after a buffer was opened", function()
+			local blame_winid = blame_view.blame_winid
+
+			open_in(blame_winid)
+			vim.api.nvim_win_close(blame_view.file_winid, true)
+			wait_for_release()
+			vim.wait(50, function()
+				return false
+			end)
+
+			assert.are.equal(view_tabpage, vim.api.nvim_get_current_tabpage())
 			assert.are.same({ blame_winid }, vim.api.nvim_tabpage_list_wins(0))
-			assert.are.equal(file_bufnr, vim.api.nvim_win_get_buf(blame_winid))
+			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(blame_winid))
 		end)
 
 		it("closes the commit panel, too", function()
@@ -468,6 +483,7 @@ describe("blame.blame_view", function()
 
 			assert.are.same({ panel_winid }, vim.api.nvim_tabpage_list_wins(0))
 			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(panel_winid))
+			assert.is_false(vim.wo[panel_winid].winfixheight)
 		end)
 	end)
 
