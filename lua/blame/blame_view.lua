@@ -126,10 +126,13 @@ function BlameView:mount()
 		group = self.augroup,
 		callback = function()
 			local winid = vim.api.nvim_get_current_win()
-			if self:owns_window(winid) and not self:owns_buffer(vim.api.nvim_win_get_buf(winid)) then
+			if self:shows_other_buffer(winid) then
 				-- Scheduled, because closing windows while e.g. a file explorer still opens the buffer confuses it
 				vim.schedule(function()
-					self:release(winid)
+					-- The view may be gone already, e.g. when buffers were opened in two of its windows
+					if self.tabpage and self:shows_other_buffer(winid) then
+						self:release()
+					end
 				end)
 			end
 		end,
@@ -321,32 +324,43 @@ function BlameView:navigate_backward()
 	self:show_commit_message()
 end
 
---- @param winid number
---- @return boolean
-function BlameView:owns_window(winid)
-	return winid == self.blame_winid or winid == self.file_winid or winid == self.commit_panel.winid
+--- Returns the windows of the view, each with the buffer it shows as long as it is part of the view.
+--- @return table<number, number> bufnr by winid
+function BlameView:view_windows()
+	local windows = {
+		[self.blame_winid] = self.blame_bufnr,
+		[self.file_winid] = self.file_bufnr,
+	}
+	if self.commit_panel.winid then
+		windows[self.commit_panel.winid] = self.commit_panel.bufnr
+	end
+	return windows
 end
 
---- @param bufnr number
+--- Returns whether a window of the view shows a buffer that is not its own, e.g. a file opened from an explorer.
+--- @param winid number
 --- @return boolean
-function BlameView:owns_buffer(bufnr)
-	return bufnr == self.blame_bufnr or bufnr == self.file_bufnr or bufnr == self.commit_panel.bufnr
+function BlameView:shows_other_buffer(winid)
+	local bufnr = self:view_windows()[winid]
+	return bufnr ~= nil and vim.api.nvim_win_is_valid(winid) and vim.api.nvim_win_get_buf(winid) ~= bufnr
 end
 
---- Closes the view, except for one of its windows, which now shows another buffer and becomes a normal window.
---- The tab page stays, e.g. with the file explorer the buffer was opened from.
---- @param winid number
-function BlameView:release(winid)
+--- Closes the view, except for its windows that show other buffers now, which become normal windows.
+--- The tab page stays, e.g. with the file explorer the buffers were opened from.
+function BlameView:release()
 	if self.augroup then
 		vim.api.nvim_del_augroup_by_id(self.augroup)
 		self.augroup = nil
 	end
-	if self.commit_panel.winid == winid then
-		self.commit_panel.winid = nil
-	end
-	for _, view_winid in ipairs({ self.blame_winid, self.file_winid, self.commit_panel.winid }) do
-		if view_winid ~= winid and vim.api.nvim_win_is_valid(view_winid) then
-			vim.api.nvim_win_close(view_winid, true)
+	for winid in pairs(self:view_windows()) do
+		if self:shows_other_buffer(winid) then
+			-- The only option of the view that belongs to the window, not to the buffer shown in it
+			vim.wo[winid].winfixwidth = false
+			if winid == self.commit_panel.winid then
+				self.commit_panel.winid = nil
+			end
+		elseif vim.api.nvim_win_is_valid(winid) then
+			vim.api.nvim_win_close(winid, true)
 		end
 	end
 	self.commit_panel:destroy()
