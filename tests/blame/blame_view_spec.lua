@@ -448,6 +448,21 @@ describe("blame.blame_view", function()
 			assert.is_false(vim.api.nvim_buf_is_valid(blame_view.file_bufnr))
 		end)
 
+		it("stays in the tab page when a buffer is opened right after a window of the view was closed", function()
+			local blame_winid = blame_view.blame_winid
+
+			vim.api.nvim_win_close(blame_view.file_winid, true)
+			open_in(blame_winid)
+			wait_for_release()
+			vim.wait(50, function()
+				return false
+			end)
+
+			assert.are.equal(view_tabpage, vim.api.nvim_get_current_tabpage())
+			assert.are.same({ blame_winid }, vim.api.nvim_tabpage_list_wins(0))
+			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(blame_winid))
+		end)
+
 		it("stays in the tab page when a window of the view is closed right after a buffer was opened", function()
 			local blame_winid = blame_view.blame_winid
 
