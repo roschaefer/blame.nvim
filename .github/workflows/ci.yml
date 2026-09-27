@@ -7,7 +7,7 @@ on:
 
 jobs:
   ci:
-    uses: folke/github/.github/workflows/ci.yml@main
+    uses: folke/github/.github/workflows/ci.yml@d1cb00f0473c256299c7b35b6e199559366e56bc # main
     secrets: inherit
     with:
       plugin: blame.nvim
