@@ -59,6 +59,8 @@ function BlameView:new(dependencies)
 		augroup = nil,
 		ns_id = vim.api.nvim_create_namespace("blame"),
 		cursor_commit_ns_id = vim.api.nvim_create_namespace("blame_cursor_commit"),
+		highlighted_commit = nil,
+		highlighted_blame_lines = nil,
 		breadcrumb = Breadcrumb:new(),
 		commit_panel = CommitPanel:new({ git_instance = dependencies.git_instance }),
 		blame_lines = {},
@@ -263,8 +265,16 @@ end
 --- Marks all lines of the commit of the cursor line with a bar in the sign column of the file content window,
 --- right next to the blame window, so the lines that belong together can be told apart without colouring the text.
 function BlameView:highlight_cursor_commit()
-	vim.api.nvim_buf_clear_namespace(self.file_bufnr, self.cursor_commit_ns_id, 0, -1)
 	local cursor_line = self:get_cursor_line()
+	local commit = cursor_line and cursor_line.header.commit
+	-- Redrawn only for another commit or another version, because a commit can have thousands of lines
+	if commit == self.highlighted_commit and self.blame_lines == self.highlighted_blame_lines then
+		return
+	end
+	self.highlighted_commit = commit
+	self.highlighted_blame_lines = self.blame_lines
+
+	vim.api.nvim_buf_clear_namespace(self.file_bufnr, self.cursor_commit_ns_id, 0, -1)
 	if not cursor_line then
 		return
 	end

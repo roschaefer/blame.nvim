@@ -218,6 +218,31 @@ describe("blame.blame_view", function()
 			end
 		)
 
+		it("does not redraw the bar while the cursor stays within the same commit", function()
+			local mock_git = {
+				original_file = "/path/to/repo/file.lua",
+				git_root = "/path/to/repo",
+				get_blame_output = stub({}, "get_blame_output", commit_twice),
+			}
+			local blame_view = BlameView:new({ git_instance = mock_git })
+			blame_view:mount()
+			vim.api.nvim_set_current_win(blame_view.file_winid)
+			local set_extmark = spy.on(vim.api, "nvim_buf_set_extmark")
+
+			vim.api.nvim_win_set_cursor(blame_view.file_winid, { 3, 0 })
+			blame_view:follow_cursor()
+
+			assert.spy(set_extmark).was.called(0)
+
+			vim.api.nvim_win_set_cursor(blame_view.file_winid, { 2, 0 })
+			blame_view:follow_cursor()
+
+			assert.spy(set_extmark).was.called(1)
+			assert.are.same({ 1 }, highlighted_rows(blame_view))
+
+			blame_view:close()
+		end)
+
 		it("marks the commit of the cursor line right after opening and navigating", function()
 			local mock_git = {
 				original_file = "/path/to/repo/file.lua",
