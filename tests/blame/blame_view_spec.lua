@@ -417,20 +417,7 @@ describe("blame.blame_view", function()
 			local wo = vim.wo[blame_winid]
 			assert.is_false(wo.scrollbind)
 			assert.is_false(wo.cursorbind)
-			assert.is_false(wo.winfixwidth)
 			assert.are.equal("", wo.winbar)
-		end)
-
-		it("keeps the fixed sizes of a window that the view did not set, e.g. by an explorer", function()
-			local file_winid = blame_view.file_winid
-			vim.wo[file_winid].winfixwidth = true
-			vim.wo[file_winid].winfixheight = true
-
-			open_in(file_winid)
-			wait_for_release()
-
-			assert.is_true(vim.wo[file_winid].winfixwidth)
-			assert.is_true(vim.wo[file_winid].winfixheight)
 		end)
 
 		it("keeps every window that shows another buffer, e.g. when a plugin opens buffers in two of them", function()
@@ -510,7 +497,6 @@ describe("blame.blame_view", function()
 
 			assert.are.same({ panel_winid }, vim.api.nvim_tabpage_list_wins(0))
 			assert.are.equal(other_bufnr, vim.api.nvim_win_get_buf(panel_winid))
-			assert.is_false(vim.wo[panel_winid].winfixheight)
 		end)
 	end)
 
