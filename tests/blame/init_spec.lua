@@ -46,13 +46,19 @@ describe("blame.init", function()
 		assert.are.same({ "q", "<C-c>" }, blame.options.keys.close)
 	end)
 
+	it("has default keys to move from block to block like moving from line to line", function()
+		blame.setup({})
+		assert.are.same({ "j", "<Down>" }, blame.options.keys.next_block)
+		assert.are.same({ "k", "<Up>" }, blame.options.keys.previous_block)
+	end)
+
 	it("has default navigation keys like the tag stack and the jumplist", function()
 		blame.setup({})
 		assert.are.same({ "<CR>", "<C-]>" }, blame.options.keys.navigate_forward)
 		assert.are.same({ "<C-o>", "<C-t>", "<BS>" }, blame.options.keys.navigate_backward)
 	end)
 
-	it("maps all keys in both the blame and the file content buffer", function()
+	it("maps all keys in both the blame and the file content buffer, and block motions in the blame buffer", function()
 		blame.setup({})
 		vim.cmd("edit README.md")
 		local original_tabpage = vim.api.nvim_get_current_tabpage()
@@ -61,13 +67,18 @@ describe("blame.init", function()
 
 		local wins = vim.api.nvim_tabpage_list_wins(0)
 		assert.are.equal(2, #wins)
-		for _, win in ipairs(wins) do
-			local mapped_keys = vim.tbl_map(function(keymap)
+		local function mapped_keys(win)
+			local keys = vim.tbl_map(function(keymap)
 				return keymap.lhs
 			end, vim.api.nvim_buf_get_keymap(vim.api.nvim_win_get_buf(win), "n"))
-			table.sort(mapped_keys)
-			assert.are.same({ "<BS>", "<C-C>", "<C-O>", "<C-T>", "<C-]>", "<CR>", "K", "q" }, mapped_keys)
+			table.sort(keys)
+			return keys
 		end
+		assert.are.same(
+			{ "<BS>", "<C-C>", "<C-O>", "<C-T>", "<C-]>", "<CR>", "<Down>", "<Up>", "K", "j", "k", "q" },
+			mapped_keys(wins[1])
+		)
+		assert.are.same({ "<BS>", "<C-C>", "<C-O>", "<C-T>", "<C-]>", "<CR>", "K", "q" }, mapped_keys(wins[2]))
 		vim.api.nvim_feedkeys("K", "x", false)
 		local panel_winid = vim.api.nvim_tabpage_list_wins(0)[3]
 		local panel_keys = vim.tbl_map(function(keymap)

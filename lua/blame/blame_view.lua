@@ -348,6 +348,40 @@ function BlameView:highlight_cursor_commit()
 	end
 end
 
+--- Moves the cursor of the blame window to the first line of another block of lines from the same commit,
+--- skipping the empty lines in between. It stops at the first and the last block.
+--- @param count number How many blocks to move, negative to move up
+function BlameView:move_to_block(count)
+	local row, col = unpack(vim.api.nvim_win_get_cursor(self.blame_winid))
+	local down = count > 0
+	local block_starts = {}
+	local previous_commit = ""
+	for i, line in ipairs(self.blame_lines) do
+		if line.header.commit ~= previous_commit then
+			table.insert(block_starts, i)
+			previous_commit = line.header.commit
+		end
+	end
+
+	-- The block the cursor is in, not necessarily on its first line
+	local current = 0
+	for index, start in ipairs(block_starts) do
+		if start <= row then
+			current = index
+		end
+	end
+	-- Moving up from inside a block goes to its first line first
+	if count < 0 and block_starts[current] and block_starts[current] < row then
+		count = count + 1
+	end
+
+	local target = block_starts[math.max(1, math.min(current + count, #block_starts))]
+	-- Below the first line of the last block there is no next block, and moving down must not move up
+	if target and (not down or target > row) then
+		vim.api.nvim_win_set_cursor(self.blame_winid, { target, col })
+	end
+end
+
 --- Updates everything that depends on the cursor line.
 function BlameView:follow_cursor()
 	self:highlight_cursor_commit()

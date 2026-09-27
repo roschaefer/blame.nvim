@@ -39,6 +39,7 @@ Navigate through the commit history:
 * Press `<CR>` (or `<C-]>`) on any line to view the file as it was before the commit that last changed this line.
 * Press `<C-o>` (or `<C-t>`, `<BS>`) to go back to the previous commit in the history.
 * Both work in the blame window and in the file content window, similar to following a tag with `<C-]>` and popping the tag stack with `<C-t>`.
+* In the blame window, `j` and `k` (or `<Down>` and `<Up>`) skip the empty lines and move from commit to commit, i.e. to the first line of the next or previous block. They take a count, e.g. `3j`. In the file content window they move line by line as usual.
 * Switch between the blame window and the file content window with the usual window commands, e.g. `<C-w>h` and `<C-w>l`.
 * Press `K` to open or close a panel at the bottom with the full commit message, author and date of the cursor line. It follows the cursor while it is open. Pressing `K` inside the panel closes it and returns to the window you came from, `q` closes the whole view. `:q` inside the panel closes only the panel.
 * Press `q` or `<C-c>` to close the blame view. Closing the blame or the file content window (e.g. `:q`) closes the whole view.
@@ -61,6 +62,8 @@ return {
         navigate_backward = { "<C-o>", "<C-t>", "<BS>" },
         close = { "q", "<C-c>" },
         toggle_commit_message = "K",
+        next_block = { "j", "<Down>" },
+        previous_block = { "k", "<Up>" },
       },
     },
     cmd = "Blame",
