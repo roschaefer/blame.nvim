@@ -28,7 +28,6 @@ local M = {}
 ---@field previous Previous|nil
 ---@field filename string
 ---@field line_content string
----@field date string (computed from author_time)
 
 --- Parses the git blame --line-porcelain output.
 --- @param blame_result_stdout string The stdout of the git blame command.
@@ -68,9 +67,6 @@ function M.parse_blame_output(blame_result_stdout)
 				current_porcelain.author_mail = line:sub(13)
 			elseif line:sub(1, 12) == "author-time " then
 				current_porcelain.author_time = tonumber(line:sub(13))
-				if current_porcelain.author_time then
-					current_porcelain.date = os.date("%Y-%m-%d", current_porcelain.author_time)
-				end
 			elseif line:sub(1, 10) == "author-tz " then
 				current_porcelain.author_tz = line:sub(11)
 			elseif line:sub(1, 10) == "committer " then

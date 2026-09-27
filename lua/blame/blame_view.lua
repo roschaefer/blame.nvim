@@ -2,6 +2,7 @@ local BlameView = {}
 BlameView.__index = BlameView
 
 local parser = require("blame.parser")
+local relative_date = require("blame.relative_date")
 local Breadcrumb = require("blame.breadcrumb")
 local CommitPanel = require("blame.commit_panel")
 local utils = require("blame.utils")
@@ -36,6 +37,14 @@ local function highlight_syntax(bufnr, filetype)
 		-- No tree-sitter parser is installed for this language
 		vim.bo[bufnr].syntax = filetype
 	end
+end
+
+--- Pads a string with spaces to a display width.
+--- @param text string
+--- @param width number
+--- @return string
+local function pad(text, width)
+	return text .. string.rep(" ", width - vim.fn.strdisplaywidth(text))
 end
 
 function BlameView:new(dependencies)
@@ -84,7 +93,7 @@ function BlameView:mount()
 	self.blame_winid = vim.api.nvim_open_win(self.blame_bufnr, true, {
 		split = "left",
 		win = self.file_winid,
-		width = math.floor(vim.o.columns * 0.25),
+		width = math.floor(vim.o.columns / 3),
 	})
 
 	-- Defaults only: the user config may change them for the blame window via its filetype.
@@ -171,34 +180,12 @@ function BlameView:update_view(commit_info, blame_output)
 	local blame_result = parser.parse_blame_output(blame_result_stdout)
 	self.blame_lines = blame_result.lines
 
-	local blame_content = {}
 	local file_content = {}
-	local commit_highlights = {}
-	local previous_commit = ""
 	for i, line in ipairs(self.blame_lines) do
-		-- Only the first line of a block of lines from the same commit is annotated
-		if line.header.commit ~= previous_commit then
-			local highlight_group = "GitBlameCommit_" .. line.header.commit
-			vim.api.nvim_set_hl(0, highlight_group, { fg = "#" .. line.header.commit:sub(1, 6) })
-			commit_highlights[i] = highlight_group
-			blame_content[i] = string.format("%s %s (%s)", line.header.commit:sub(1, 8), line.author, line.date)
-			previous_commit = line.header.commit
-		else
-			blame_content[i] = ""
-		end
 		file_content[i] = line.line_content
 	end
-
-	utils.set_lines(self.blame_bufnr, blame_content)
+	self:render_blame()
 	utils.set_lines(self.file_bufnr, file_content)
-
-	vim.api.nvim_buf_clear_namespace(self.blame_bufnr, self.ns_id, 0, -1)
-	for i, highlight_group in pairs(commit_highlights) do
-		vim.api.nvim_buf_set_extmark(self.blame_bufnr, self.ns_id, i - 1, 0, {
-			end_col = 8,
-			hl_group = highlight_group,
-		})
-	end
 
 	local filename
 	if commit_info and commit_info.previous and commit_info.previous.filename then
@@ -212,6 +199,61 @@ function BlameView:update_view(commit_info, blame_output)
 
 	self:enforce_view_options()
 	return true
+end
+
+--- Writes the date, author and subject of each block of lines into the blame buffer, like GitHub's blame view.
+function BlameView:render_blame()
+	local now = os.time()
+	local annotations = {}
+	local date_width = 0
+	local author_width = 0
+	local previous_commit = ""
+	for i, line in ipairs(self.blame_lines) do
+		-- Only the first line of a block of lines from the same commit is annotated
+		if line.header.commit ~= previous_commit then
+			local annotation = {
+				date = line.author_time and relative_date.format(line.author_time, now) or "",
+				author = line.author or "",
+				subject = line.summary or "",
+			}
+			date_width = math.max(date_width, vim.fn.strdisplaywidth(annotation.date))
+			author_width = math.max(author_width, vim.fn.strdisplaywidth(annotation.author))
+			annotations[i] = annotation
+			previous_commit = line.header.commit
+		end
+	end
+
+	local blame_content = {}
+	for i = 1, #self.blame_lines do
+		local annotation = annotations[i]
+		if annotation then
+			local date = pad(annotation.date, date_width)
+			annotation.author_col = #date + 1
+			blame_content[i] = date .. " " .. pad(annotation.author, author_width) .. " " .. annotation.subject
+		else
+			blame_content[i] = ""
+		end
+	end
+	utils.set_lines(self.blame_bufnr, blame_content)
+
+	-- Alternating colours tell the columns apart: date and subject stand out, the author between them does not
+	vim.api.nvim_set_hl(0, "GitBlameDate", { link = "Normal", default = true })
+	vim.api.nvim_set_hl(0, "GitBlameAuthor", { link = "Comment", default = true })
+	vim.api.nvim_set_hl(0, "GitBlameSubject", { link = "Normal", default = true })
+	vim.api.nvim_buf_clear_namespace(self.blame_bufnr, self.ns_id, 0, -1)
+	for i, annotation in pairs(annotations) do
+		local subject_col = annotation.author_col + #pad(annotation.author, author_width) + 1
+		for _, column in ipairs({
+			{ 0, #annotation.date, "GitBlameDate" },
+			{ annotation.author_col, annotation.author_col + #annotation.author, "GitBlameAuthor" },
+			{ subject_col, subject_col + #annotation.subject, "GitBlameSubject" },
+		}) do
+			vim.api.nvim_buf_set_extmark(self.blame_bufnr, self.ns_id, i - 1, column[1], {
+				end_col = column[2],
+				hl_group = column[3],
+			})
+		end
+	end
 end
 
 --- Sets the window options the view depends on, overriding the user config.
