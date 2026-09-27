@@ -21,7 +21,7 @@ current file similar to Github’s blame button
 
 FEATURES                                      *blame.nvim-blame.nvim-features*
 
-- **Git Blame Integration:** Displays the short commit hash, author, and date next to each block of lines from the same commit.
+- **Git Blame Integration:** Displays the date (relative to today), author and commit subject next to each block of lines from the same commit, like GitHub’s blame view.
 - **Window Synchronization:** Keeps the blame window synchronized with the original file’s cursor position and scroll view.
 - **Commit Message Panel:** Shows the full commit message of the cursor line on demand (`K`), to answer why a line is there.
 - **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<C-o>` to go backward) through revisions of a file.
@@ -63,8 +63,8 @@ Navigate through the commit history:
 - Press `q` or `<C-c>` to close the blame view. Closing the blame or the file content window (e.g. `:q`) closes the whole view.
 - Opening another file in one of the windows of the view, e.g. from a file explorer, closes the rest of the view. The file stays open in that window.
 
-Both buffers are read-only, but you can select and yank text as usual, e.g.
-`yiw` on a commit hash.
+Both buffers are read-only, but you can select and yank text as usual, e.g. the
+commit hash in the commit message panel (`K`).
 
 
 CONFIGURATION                            *blame.nvim-blame.nvim-configuration*
@@ -103,6 +103,10 @@ The blame window has the filetype `blame`. You can customize it in
 
 Buffer-local keymaps defined there take precedence over the keymaps of
 `blame.nvim`.
+
+The columns of the blame window are highlighted with `GitBlameDate` (linked to
+`Normal`), `GitBlameAuthor` (linked to `Comment`) and `GitBlameSubject` (linked
+to `Normal`).
 
 The view always sets these options in both windows, because it needs them to
 keep the lines of both windows aligned: `scrollbind`, `cursorbind`, `nowrap`,
