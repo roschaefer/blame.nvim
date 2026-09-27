@@ -387,10 +387,12 @@ function BlameView:release()
 			if self:is_view_buffer(vim.api.nvim_win_get_buf(winid)) then
 				vim.api.nvim_win_close(winid, true)
 			else
-				-- Unlike the other options of the view, these belong to the window, not to the buffer shown in it
-				vim.wo[winid].winfixwidth = false
-				vim.wo[winid].winfixheight = false
-				if winid == self.commit_panel.winid then
+				-- Unlike the other options of the view, these belong to the window, not to the buffer shown in it.
+				-- Only the one the view set is reset, e.g. an explorer may have set the other one.
+				if winid == self.blame_winid then
+					vim.wo[winid].winfixwidth = false
+				elseif winid == self.commit_panel.winid then
+					vim.wo[winid].winfixheight = false
 					self.commit_panel.winid = nil
 				end
 			end
