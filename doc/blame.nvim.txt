@@ -95,6 +95,71 @@ You can override the default configuration:
 <
 
 
+CUSTOM KEYMAPS ~
+
+What to do with a commit depends on the tools you use, so `blame.nvim` leaves
+that to you: `on_attach` is called with the `view` whenever a blame view opens.
+
+>lua
+    -- plugins/blame.lua
+    return {
+      {
+        "roschaefer/blame.nvim",
+        opts = {
+          on_attach = function(view)
+            -- Yank the hash of the commit of the cursor line
+            view.keymap.set("n", "yc", function()
+              local commit = view:commit()
+              if commit then
+                vim.fn.setreg(vim.v.register, commit.hash)
+              end
+            end, { desc = "Yank commit hash" })
+
+            -- Show the commit of the version of the file that is shown, with your git plugin.
+            -- The working tree has no commit, so show the last one.
+            view.keymap.set("n", "gd", function()
+              local revision = view:revision() or "HEAD"
+              -- vim.cmd("Gitsigns show_commit " .. revision) -- gitsigns.nvim
+              -- vim.cmd("DiffviewOpen " .. revision .. "^!") -- diffview.nvim
+              -- vim.cmd("Git show " .. revision) -- vim-fugitive
+            end, { desc = "Show commit" })
+          end,
+        },
+        cmd = "Blame",
+      },
+    }
+<
+
+  ---------------------------------------------------------------------------
+  view
+  --------------------------------------- -----------------------------------
+  view.keymap.set(mode, lhs, rhs, opts)   Like vim.keymap.set(), but only in
+                                          the buffers of the view. Keymaps
+                                          set here take precedence over the
+                                          keymaps of blame.nvim.
+
+  view:commit()                           The commit of the cursor line,
+                                          { hash, author, time, summary }, or
+                                          nil if the line is not committed
+                                          yet.
+
+  view:revision()                         The hash of the commit whose
+                                          version of the file is shown, or
+                                          nil for the working tree.
+
+  view:close()                            Closes the view.
+
+  view.buffers                            The buffers of the blame window and
+                                          the file content window.
+
+  view.file, view.git_root                The path of the blamed file and the
+                                          root of its repository.
+  ---------------------------------------------------------------------------
+The windows of the view have the root of the repository as their local
+directory (`:lcd`), so git plugins find the repository even if Neovim was
+started outside of it.
+
+
 BLAME WINDOW ~
 
 The blame window has the filetype `blame`. You can customize it in
@@ -164,6 +229,10 @@ This works through the project-local `.lazy.lua` <.lazy.lua> spec, which
 lazy.nvim merges into your configuration whenever Neovim starts inside this
 repository. The first time, Neovim asks you to trust `.lazy.lua`: choose
 `(v)iew` and run `:trust`.
+
+The project-local spec also adds the keymaps from Custom keymaps as a demo of
+`on_attach`: `yc` yanks the commit of the cursor line, `gd` shows the commit of
+the shown version, or `HEAD` for the working tree.
 
 To run the unit tests:
 
