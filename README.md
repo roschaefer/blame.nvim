@@ -90,12 +90,10 @@ return {
           end
         end, { desc = "Yank commit hash" })
 
-        -- Show the diff of the version of the file that is shown, with gitsigns.nvim
+        -- Show the diff of the version of the file that is shown, with gitsigns.nvim.
+        -- The working tree has no commit, so show the last one.
         view.keymap.set("n", "gd", function()
-          local revision = view:revision()
-          if revision then
-            vim.cmd("Gitsigns show_commit " .. revision)
-          end
+          vim.cmd("Gitsigns show_commit " .. (view:revision() or "HEAD"))
         end, { desc = "Show commit diff" })
       end,
     },
@@ -168,7 +166,7 @@ lazy.nvim merges into your configuration whenever Neovim starts inside this
 repository. The first time, Neovim asks you to trust `.lazy.lua`: choose
 `(v)iew` and run `:trust`.
 
-The project-local spec also installs gitsigns.nvim if it is missing and adds the keymaps from [Custom keymaps](#custom-keymaps) as a demo of `on_attach`: `yc` yanks the commit of the cursor line, `gd` shows the diff of the shown version.
+The project-local spec also installs gitsigns.nvim if it is missing and adds the keymaps from [Custom keymaps](#custom-keymaps) as a demo of `on_attach`: `yc` yanks the commit of the cursor line, `gd` shows the diff of the shown version, or of `HEAD` for the working tree.
 
 To run the unit tests:
 

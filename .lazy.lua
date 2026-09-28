@@ -37,12 +37,8 @@ return {
 					vim.notify("Yanked " .. commit.hash .. " " .. (commit.summary or ""))
 				end, { desc = "Yank the commit of the cursor line" })
 				view.keymap.set("n", "gd", function()
-					local revision = view:revision()
-					if not revision then
-						vim.notify("The working tree is shown, not a commit")
-						return
-					end
-					vim.cmd("Gitsigns show_commit " .. revision)
+					-- The working tree has no commit, so show the last one
+					vim.cmd("Gitsigns show_commit " .. (view:revision() or "HEAD"))
 				end, { desc = "Show the diff of the shown version" })
 			end,
 		},
