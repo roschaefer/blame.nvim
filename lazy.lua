@@ -7,6 +7,8 @@ return {
 				navigate_backward = { "<C-o>", "<C-t>", "<BS>" },
 				close = { "q", "<C-c>" },
 				toggle_commit_message = "K",
+				next_block = { "j", "<Down>" },
+				previous_block = { "k", "<Up>" },
 			},
 		},
 		cmd = {

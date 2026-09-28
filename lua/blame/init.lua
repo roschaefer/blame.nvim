@@ -13,6 +13,8 @@ M.defaults = {
 		navigate_backward = { "<C-o>", "<C-t>", "<BS>" },
 		close = { "q", "<C-c>" },
 		toggle_commit_message = "K",
+		next_block = { "j", "<Down>" },
+		previous_block = { "k", "<Up>" },
 	},
 }
 
@@ -56,6 +58,13 @@ function M.show_blame_info()
 			blame_view:toggle_commit_message()
 		end)
 	end
+	-- Only the blame window skips the empty lines, the file content window moves line by line as usual
+	utils.add_keymap(blame_view.blame_bufnr, M.options.keys.next_block, function()
+		blame_view:move_to_block(vim.v.count1)
+	end)
+	utils.add_keymap(blame_view.blame_bufnr, M.options.keys.previous_block, function()
+		blame_view:move_to_block(-vim.v.count1)
+	end)
 	utils.add_keymap(blame_view.commit_panel.bufnr, M.options.keys.toggle_commit_message, function()
 		blame_view.commit_panel:close()
 	end)

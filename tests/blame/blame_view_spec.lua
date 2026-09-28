@@ -1081,4 +1081,107 @@ describe("blame.blame_view", function()
 			blame_view:close()
 		end)
 	end)
+
+	describe("block motions", function()
+		-- Blocks start at lines 1, 2, 5 and 6, lines 3, 4 and 7 are empty in the blame window
+		local blocks = table.concat({
+			"1111111111111111111111111111111111111111 1 1 1",
+			"filename file.lua",
+			"\tline 1",
+			"2222222222222222222222222222222222222222 1 2 3",
+			"filename file.lua",
+			"\tline 2",
+			"2222222222222222222222222222222222222222 2 3",
+			"\tline 3",
+			"2222222222222222222222222222222222222222 3 4",
+			"\tline 4",
+			"1111111111111111111111111111111111111111 2 5 1",
+			"\tline 5",
+			"3333333333333333333333333333333333333333 1 6 2",
+			"filename file.lua",
+			"\tline 6",
+			"3333333333333333333333333333333333333333 2 7",
+			"\tline 7",
+		}, "\n")
+		local blame_view
+
+		before_each(function()
+			blame_view = BlameView:new({
+				git_instance = {
+					original_file = "/path/to/repo/file.lua",
+					git_root = "/path/to/repo",
+					get_blame_output = stub({}, "get_blame_output", blocks),
+				},
+			})
+			blame_view:mount()
+		end)
+
+		after_each(function()
+			blame_view:close()
+		end)
+
+		local function move(from_row, count)
+			vim.api.nvim_win_set_cursor(blame_view.blame_winid, { from_row, 0 })
+			blame_view:move_to_block(count)
+			return vim.api.nvim_win_get_cursor(blame_view.blame_winid)[1]
+		end
+
+		it("moves down to the first line of the next block, skipping empty lines", function()
+			assert.are.equal(5, move(2, 1))
+			assert.are.equal(5, move(3, 1))
+		end)
+
+		it("moves up to the first line of the previous block, skipping empty lines", function()
+			assert.are.equal(2, move(5, -1))
+			assert.are.equal(5, move(6, -1))
+		end)
+
+		it("moves up to the first line of the current block when the cursor is inside it", function()
+			assert.are.equal(2, move(4, -1))
+			assert.are.equal(6, move(7, -1))
+		end)
+
+		it("moves by as many blocks as the count", function()
+			assert.are.equal(6, move(1, 3))
+			assert.are.equal(1, move(6, -3))
+			assert.are.equal(1, move(4, -2))
+		end)
+
+		it("stops at the first and the last block", function()
+			assert.are.equal(6, move(5, 10))
+			assert.are.equal(1, move(2, -10))
+		end)
+
+		it("stays inside the last block when moving down, instead of moving up to its first line", function()
+			assert.are.equal(7, move(7, 1))
+		end)
+
+		it("keeps the cursor column across shorter lines, like plain j and k", function()
+			local subjects = { "a long subject line for the first block", "short", "another long subject line" }
+			local output = {}
+			for i, subject in ipairs(subjects) do
+				table.insert(output, string.format("%d%s %d %d 1", i, string.rep("0", 39), i, i))
+				table.insert(output, "summary " .. subject)
+				table.insert(output, "filename file.lua")
+				table.insert(output, "\tline " .. i)
+			end
+			local view = BlameView:new({
+				git_instance = {
+					original_file = "/path/to/repo/file.lua",
+					git_root = "/path/to/repo",
+					get_blame_output = stub({}, "get_blame_output", table.concat(output, "\n")),
+				},
+			})
+			view:mount()
+			vim.api.nvim_win_set_cursor(view.blame_winid, { 1, 20 })
+
+			view:move_to_block(1)
+			assert.are.same({ 2, 6 }, vim.api.nvim_win_get_cursor(view.blame_winid))
+
+			view:move_to_block(1)
+			assert.are.same({ 3, 20 }, vim.api.nvim_win_get_cursor(view.blame_winid))
+
+			view:close()
+		end)
+	end)
 end)
