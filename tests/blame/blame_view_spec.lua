@@ -254,6 +254,7 @@ describe("blame.blame_view", function()
 				original_file = "/path/to/repo/file.lua",
 				git_root = "/path/to/repo",
 				get_blame_output = stub({}, "get_blame_output", commit_twice),
+				get_prior_line = stub({}, "get_prior_line", nil),
 			}
 			local blame_view = BlameView:new({ git_instance = mock_git })
 
@@ -471,6 +472,7 @@ describe("blame.blame_view", function()
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
 			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
+			get_prior_line = stub({}, "get_prior_line", nil),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 
@@ -574,6 +576,7 @@ describe("blame.blame_view", function()
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
 			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
+			get_prior_line = stub({}, "get_prior_line", nil),
 		}
 		local original_tabpage = vim.api.nvim_get_current_tabpage()
 		vim.cmd("tabnew")
@@ -800,11 +803,37 @@ describe("blame.blame_view", function()
 		assert.is_false(vim.api.nvim_tabpage_is_valid(tabpage))
 	end)
 
-	it("sets cursor to source_line when navigating forward", function()
+	it("moves the cursor to the line in the version prior to the commit when navigating forward", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
 			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
+			get_prior_line = stub({}, "get_prior_line", 37),
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		blame_view:mount()
+		local commit_info = {
+			header = { commit = "hash1", source_line = 42, result_line = 1 },
+			previous = { commit = "prev_hash", filename = "file.lua" },
+		}
+		blame_view.blame_lines = { commit_info }
+		vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
+
+		blame_view:navigate_forward()
+
+		assert.stub(mock_git.get_prior_line).was.called_with(mock_git, commit_info)
+		assert.are.same({ 37, 0 }, vim.api.nvim_win_get_cursor(blame_view.blame_winid))
+		assert.are.same({ 37, 0 }, vim.api.nvim_win_get_cursor(blame_view.file_winid))
+
+		blame_view:close()
+	end)
+
+	it("falls back to the source line if the prior line cannot be found", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
+			get_prior_line = stub({}, "get_prior_line", nil),
 		}
 
 		local blame_view = BlameView:new({
@@ -876,6 +905,7 @@ describe("blame.blame_view", function()
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
 			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
+			get_prior_line = stub({}, "get_prior_line", nil),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 		blame_view:mount()
@@ -942,6 +972,7 @@ describe("blame.blame_view", function()
 			original_file = "/path/to/repo/file.lua",
 			git_root = "/path/to/repo",
 			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
+			get_prior_line = stub({}, "get_prior_line", nil),
 		}
 		local blame_view = BlameView:new({ git_instance = mock_git })
 		assert.is_true(blame_view:mount())
@@ -979,6 +1010,7 @@ describe("blame.blame_view", function()
 				original_file = "/path/to/repo/file.lua",
 				git_root = "/path/to/repo",
 				get_blame_output = stub({}, "get_blame_output", two_commits),
+				get_prior_line = stub({}, "get_prior_line", nil),
 				get_commit_message = stub({}, "get_commit_message", function(_, commit)
 					return { "commit " .. commit }
 				end),
@@ -1215,6 +1247,7 @@ describe("blame.blame_view", function()
 					original_file = "/path/to/repo/file.lua",
 					git_root = "/path/to/repo",
 					get_blame_output = stub({}, "get_blame_output", older_and_uncommitted),
+					get_prior_line = stub({}, "get_prior_line", nil),
 				},
 			})
 			blame_view:mount()

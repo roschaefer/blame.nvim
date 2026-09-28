@@ -3,6 +3,7 @@
 local assert = require("luassert")
 local stub = require("luassert.stub")
 local Git = require("blame.git")
+local parser = require("blame.parser")
 
 describe("blame.git", function()
 	local test_file = "README.md"
@@ -65,6 +66,57 @@ describe("blame.git", function()
 			assert.is_not_nil(match)
 
 			vim.api.nvim_buf_delete(buf_id, { force = true })
+		end)
+	end)
+
+	describe("get_prior_line", function()
+		local repo
+
+		local function git_in_repo(args)
+			local cmd = { "git", "-c", "user.name=Test", "-c", "user.email=test@example.com" }
+			vim.list_extend(cmd, args)
+			return vim.system(cmd, { cwd = repo, text = true }):wait()
+		end
+
+		before_each(function()
+			repo = vim.fn.tempname()
+			vim.fn.mkdir(repo, "p")
+			git_in_repo({ "init", "--quiet" })
+			vim.fn.writefile({ "one", "two", "three", "four", "five" }, repo .. "/old.txt")
+			git_in_repo({ "add", "old.txt" })
+			git_in_repo({ "commit", "--quiet", "-m", "Add a file" })
+			git_in_repo({ "mv", "old.txt", "new.txt" })
+			vim.fn.writefile({ "zero", "half", "one", "two", "three", "FOUR", "five" }, repo .. "/new.txt")
+			git_in_repo({ "commit", "--quiet", "--all", "-m", "Change a renamed file" })
+		end)
+
+		after_each(function()
+			vim.fn.delete(repo, "rf")
+		end)
+
+		it("returns the line in the version prior to the commit, also if the file was renamed", function()
+			local buf_id = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_id, repo .. "/new.txt")
+			local git = Git:new(buf_id)
+			vim.api.nvim_buf_delete(buf_id, { force = true })
+			assert(git)
+			local blame_lines = parser.parse_blame_output(assert(git:get_blame_output(nil))).lines
+			local changed_line = blame_lines[6]
+			assert.are.equal("FOUR", changed_line.line_content)
+			assert.are.equal("old.txt", changed_line.previous.filename)
+
+			assert.are.equal(4, git:get_prior_line(changed_line))
+		end)
+
+		it("returns nil if there is no version prior to the commit", function()
+			local buf_id = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_id, repo .. "/new.txt")
+			local git = Git:new(buf_id)
+			vim.api.nvim_buf_delete(buf_id, { force = true })
+			assert(git)
+			local blame_lines = parser.parse_blame_output(assert(git:get_blame_output(nil))).lines
+
+			assert.is_nil(git:get_prior_line(blame_lines[3]))
 		end)
 	end)
 

@@ -1,6 +1,8 @@
 -- lua/blame/git.lua
 -- This module will contain Git-related utility functions.
 
+local diff = require("blame.diff")
+
 local Git = {}
 Git.__index = Git
 
@@ -80,6 +82,32 @@ function Git:get_blame_output(commit_info)
 		return nil
 	end
 	return blame_result.stdout
+end
+
+--- Finds the line in the version prior to a commit that corresponds to a line of the commit.
+--- @param commit_info Porcelain The blamed line, its source line is the line in the commit
+--- @return number|nil The line in the prior version, or nil if an error occurred
+function Git:get_prior_line(commit_info)
+	if not commit_info.previous then
+		return nil
+	end
+	-- Comparing the two versions of the file directly also works if the file was renamed
+	local diff_cmd = {
+		"git",
+		"diff",
+		"--unified=0",
+		"--no-color",
+		"--no-ext-diff",
+		"--no-textconv",
+		commit_info.previous.commit .. ":" .. commit_info.previous.filename,
+		commit_info.header.commit .. ":" .. commit_info.filename,
+	}
+	local diff_result = vim.system(diff_cmd, { text = true, cwd = self.git_root }):wait()
+
+	if diff_result.code ~= 0 then
+		return nil
+	end
+	return diff.old_line(diff_result.stdout, commit_info.header.source_line)
 end
 
 --- Retrieves the commit message of a commit, together with its hash, author and date.

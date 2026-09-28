@@ -482,9 +482,9 @@ function BlameView:navigate_forward()
 			self.breadcrumb:pop()
 			return
 		end
-		if commit_info and commit_info.header and commit_info.header.source_line then
-			self:set_cursor({ commit_info.header.source_line, 0 })
-		end
+		-- The source line is the line in the commit, which may be another one in the version prior to it
+		local line = self.git_instance:get_prior_line(commit_info) or commit_info.header.source_line
+		self:set_cursor({ line, 0 })
 		self:follow_cursor()
 	end
 end
