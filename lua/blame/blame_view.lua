@@ -3,6 +3,7 @@ BlameView.__index = BlameView
 
 local parser = require("blame.parser")
 local relative_date = require("blame.relative_date")
+local age = require("blame.age")
 local Breadcrumb = require("blame.breadcrumb")
 local CommitPanel = require("blame.commit_panel")
 local utils = require("blame.utils")
@@ -11,9 +12,14 @@ local utils = require("blame.utils")
 --- The title is never empty, because windows without a winbar would be misaligned by one row.
 --- @param winid number|nil
 --- @param title string
-local function set_title(winid, title)
+--- @param right (fun(title_width: number): string)|nil Returns right-aligned 'winbar' items, not escaped
+local function set_title(winid, title, right)
 	if winid and vim.api.nvim_win_is_valid(winid) then
-		local winbar = " " .. title:gsub("%%", "%%%%")
+		title = " " .. title
+		local winbar = title:gsub("%%", "%%%%")
+		if right then
+			winbar = winbar .. "%=" .. right(vim.fn.strdisplaywidth(title))
+		end
 		vim.api.nvim_set_option_value("winbar", winbar, { scope = "local", win = winid })
 	end
 end
@@ -47,6 +53,12 @@ local function pad(text, width)
 	return text .. string.rep(" ", width - vim.fn.strdisplaywidth(text))
 end
 
+--- @param commit string
+--- @return boolean
+local function is_uncommitted(commit)
+	return commit:match("^0+$") ~= nil
+end
+
 function BlameView:new(dependencies)
 	local instance = {
 		git_instance = dependencies.git_instance,
@@ -58,6 +70,7 @@ function BlameView:new(dependencies)
 		previous_tabpage = nil,
 		augroup = nil,
 		ns_id = vim.api.nvim_create_namespace("blame"),
+		age_ns_id = vim.api.nvim_create_namespace("blame_age"),
 		cursor_commit_ns_id = vim.api.nvim_create_namespace("blame_cursor_commit"),
 		highlighted_commit = nil,
 		highlighted_blame_lines = nil,
@@ -107,7 +120,8 @@ function BlameView:mount()
 	blame_wo.number = false
 	blame_wo.relativenumber = false
 	blame_wo.statuscolumn = ""
-	blame_wo.signcolumn = "no"
+	-- Room for the stripe with the age of the commits
+	blame_wo.signcolumn = "yes:1"
 	blame_wo.foldcolumn = "0"
 	blame_wo.list = false
 	blame_wo.spell = false
@@ -146,6 +160,11 @@ function BlameView:mount()
 			end
 		end,
 	})
+	-- `:colorscheme` clears all highlight groups
+	vim.api.nvim_create_autocmd("ColorScheme", {
+		group = self.augroup,
+		callback = age.define_highlights,
+	})
 	vim.api.nvim_create_autocmd("CursorMoved", {
 		group = self.augroup,
 		buffer = self.blame_bufnr,
@@ -175,7 +194,7 @@ function BlameView:update_view(commit_info, blame_output)
 
 	local blame_title = (commit_info and commit_info.previous and commit_info.previous.commit:sub(1, 8))
 		or "Working tree"
-	set_title(self.blame_winid, blame_title)
+	set_title(self.blame_winid, blame_title, age.winbar_legend)
 
 	local file_title
 	if commit_info and commit_info.previous and commit_info.previous.filename then
@@ -259,6 +278,44 @@ function BlameView:render_blame()
 			vim.api.nvim_buf_set_extmark(self.blame_bufnr, self.ns_id, i - 1, column[1], {
 				end_col = column[2],
 				hl_group = column[3],
+			})
+		end
+	end
+
+	self:render_age()
+end
+
+--- Draws a stripe in the sign column of the blame window, next to every line, coloured by the age of its commit
+--- relative to the other commits of the file, like GitHub's blame view.
+function BlameView:render_age()
+	vim.api.nvim_buf_clear_namespace(self.blame_bufnr, self.age_ns_id, 0, -1)
+	age.define_highlights()
+
+	local now = os.time()
+	-- `git blame --line-porcelain` repeats the author time on every line, but not every caller does
+	local ages = {}
+	local newest_age, oldest_age = math.huge, 0
+	for _, line in ipairs(self.blame_lines) do
+		local commit = line.header.commit
+		-- Uncommitted lines are seconds old and would stretch the scale, so they are left out of it
+		if line.author_time and not ages[commit] and not is_uncommitted(commit) then
+			ages[commit] = now - line.author_time
+			newest_age = math.min(newest_age, ages[commit])
+			oldest_age = math.max(oldest_age, ages[commit])
+		end
+	end
+
+	for i, line in ipairs(self.blame_lines) do
+		local bucket
+		if is_uncommitted(line.header.commit) then
+			bucket = age.BUCKETS
+		elseif ages[line.header.commit] then
+			bucket = age.bucket(ages[line.header.commit], newest_age, oldest_age)
+		end
+		if bucket then
+			vim.api.nvim_buf_set_extmark(self.blame_bufnr, self.age_ns_id, i - 1, 0, {
+				sign_text = "▎",
+				sign_hl_group = age.highlight_group(bucket),
 			})
 		end
 	end

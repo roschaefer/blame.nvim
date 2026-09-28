@@ -7,6 +7,12 @@ local BlameView = require("blame.blame_view")
 
 local three_days_ago = os.time() - 3 * 24 * 60 * 60
 
+--- Returns the text of the winbar as it is drawn, without the padding on the right.
+local function winbar_text(winid)
+	local winbar = vim.api.nvim_eval_statusline(vim.wo[winid].winbar, { winid = winid, use_winbar = true })
+	return (winbar.str:gsub("%s+$", ""))
+end
+
 local function blame_output_with_lines(count)
 	local lines = {}
 	for i = 1, count do
@@ -266,6 +272,101 @@ describe("blame.blame_view", function()
 		end)
 	end)
 
+	describe("age stripe", function()
+		local day = 24 * 60 * 60
+		local two_authors = table.concat({
+			"1111111111111111111111111111111111111111 1 1 1",
+			"author Robert Schäfer",
+			"author-time " .. (os.time() - 400 * day),
+			"summary feat(view): show the commit subject in the blame window",
+			"filename file.lua",
+			"\tline content 1",
+			"2222222222222222222222222222222222222222 2 2 1",
+			"author Bot",
+			"author-time " .. (os.time() - 3 * day),
+			"summary fix: typo",
+			"filename file.lua",
+			"\tline content 2",
+		}, "\n")
+
+		local function mock_git()
+			return {
+				original_file = "/path/to/repo/file.lua",
+				git_root = "/path/to/repo",
+				get_blame_output = stub({}, "get_blame_output", two_authors),
+			}
+		end
+
+		it(
+			"draws a stripe next to every line, coloured by the age of its commit, with uncommitted lines as the newest",
+			function()
+				local older_block = table.concat({
+					"1111111111111111111111111111111111111111 1 1 2",
+					"author Old",
+					"author-time " .. (os.time() - 400 * day),
+					"filename file.lua",
+					"\tline content 1",
+					"1111111111111111111111111111111111111111 2 2",
+					"\tline content 2",
+					"2222222222222222222222222222222222222222 1 3 1",
+					"author New",
+					"author-time " .. (os.time() - 3 * day),
+					"filename file.lua",
+					"\tline content 3",
+					"0000000000000000000000000000000000000000 4 4 1",
+					"author Not Committed Yet",
+					"author-time " .. os.time(),
+					"filename file.lua",
+					"\tline content 4",
+				}, "\n")
+				local blame_view = BlameView:new({
+					git_instance = {
+						original_file = "/path/to/repo/file.lua",
+						git_root = "/path/to/repo",
+						get_blame_output = stub({}, "get_blame_output", older_block),
+					},
+				})
+
+				blame_view:update_view(nil)
+
+				local stripe = vim.tbl_map(
+					function(extmark)
+						return { extmark[2], vim.trim(extmark[4].sign_text), extmark[4].sign_hl_group }
+					end,
+					vim.api.nvim_buf_get_extmarks(
+						blame_view.blame_bufnr,
+						blame_view.age_ns_id,
+						0,
+						-1,
+						{ details = true }
+					)
+				)
+				assert.are.same({
+					{ 0, "▎", "GitBlameAge1" },
+					{ 1, "▎", "GitBlameAge1" },
+					{ 2, "▎", "GitBlameAge10" },
+					{ 3, "▎", "GitBlameAge10" },
+				}, stripe)
+			end
+		)
+
+		it("shows the legend of the age stripe in the title, if it fits", function()
+			local blame_view = BlameView:new({ git_instance = mock_git() })
+			blame_view:mount()
+
+			vim.api.nvim_win_set_width(blame_view.blame_winid, 37)
+			assert.are.equal(
+				" Working tree Older ▎▎▎▎▎▎▎▎▎▎ Newer",
+				winbar_text(blame_view.blame_winid)
+			)
+
+			vim.api.nvim_win_set_width(blame_view.blame_winid, 36)
+			assert.are.equal(" Working tree", winbar_text(blame_view.blame_winid))
+
+			blame_view:close()
+		end)
+	end)
+
 	it("falls back to regex syntax highlighting without a tree-sitter parser", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.cob",
@@ -346,7 +447,7 @@ describe("blame.blame_view", function()
 		)
 		assert.are.equal(blame_view.blame_bufnr, vim.api.nvim_win_get_buf(blame_view.blame_winid))
 		assert.are.equal(blame_view.file_bufnr, vim.api.nvim_win_get_buf(blame_view.file_winid))
-		assert.are.equal(" Working tree", vim.wo[blame_view.blame_winid].winbar)
+		assert.are.equal(" Working tree", winbar_text(blame_view.blame_winid))
 		assert.are.equal(" file.lua", vim.wo[blame_view.file_winid].winbar)
 		assert.are.equal("blame", vim.bo[blame_view.blame_bufnr].filetype)
 		assert.spy(utils_initialize_cursor_position_spy).was.called(2)
@@ -411,7 +512,7 @@ describe("blame.blame_view", function()
 		assert.is_false(vim.wo[blame_view.file_winid].diff)
 		assert.are.equal("", vim.wo[blame_view.blame_winid].statuscolumn)
 		assert.are.equal("", vim.wo[blame_view.blame_winid].colorcolumn)
-		assert.are.equal("no", vim.wo[blame_view.blame_winid].signcolumn)
+		assert.are.equal("yes:1", vim.wo[blame_view.blame_winid].signcolumn)
 		assert.are.equal("yes:1", vim.wo[blame_view.file_winid].signcolumn)
 		-- The inherited "%l " would hide the bar in the sign column
 		assert.are.equal("", vim.wo[blame_view.file_winid].statuscolumn)
@@ -726,7 +827,7 @@ describe("blame.blame_view", function()
 
 		assert.are.same({ 42, 0 }, vim.api.nvim_win_get_cursor(blame_view.blame_winid))
 		assert.are.same({ 42, 0 }, vim.api.nvim_win_get_cursor(blame_view.file_winid))
-		assert.are.equal(" prev_has", vim.wo[blame_view.blame_winid].winbar)
+		assert.are.equal(" prev_has", winbar_text(blame_view.blame_winid))
 
 		blame_view:close()
 	end)
@@ -831,7 +932,7 @@ describe("blame.blame_view", function()
 			{ "line content 1", "line content 2", "line content 3" },
 			vim.api.nvim_buf_get_lines(blame_view.file_bufnr, 0, -1, false)
 		)
-		assert.are.equal(" Working tree", vim.wo[blame_view.blame_winid].winbar)
+		assert.are.equal(" Working tree", winbar_text(blame_view.blame_winid))
 
 		blame_view:close()
 	end)
@@ -852,7 +953,7 @@ describe("blame.blame_view", function()
 		blame_view:navigate_backward()
 
 		assert.are.equal(2, #blame_view.breadcrumb.stack)
-		assert.are.equal(" prev_has", vim.wo[blame_view.blame_winid].winbar)
+		assert.are.equal(" prev_has", winbar_text(blame_view.blame_winid))
 
 		blame_view:close()
 	end)
