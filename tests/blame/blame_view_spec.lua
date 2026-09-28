@@ -1184,4 +1184,131 @@ describe("blame.blame_view", function()
 			view:close()
 		end)
 	end)
+
+	describe("api for on_attach", function()
+		local older_and_uncommitted = table.concat({
+			"1111111111111111111111111111111111111111 1 1 2",
+			"author First",
+			"author-time 123456789",
+			"summary first commit",
+			"previous 3333333333333333333333333333333333333333 file.lua",
+			"filename file.lua",
+			"\tline content 1",
+			-- `git blame --line-porcelain` repeats the commit information on every line
+			"1111111111111111111111111111111111111111 2 2",
+			"author First",
+			"author-time 123456789",
+			"summary first commit",
+			"previous 3333333333333333333333333333333333333333 file.lua",
+			"filename file.lua",
+			"\tline content 2",
+			"0000000000000000000000000000000000000000 3 3 1",
+			"author Not Committed Yet",
+			"filename file.lua",
+			"\tline content 3",
+		}, "\n")
+		local blame_view
+
+		before_each(function()
+			blame_view = BlameView:new({
+				git_instance = {
+					original_file = "/path/to/repo/file.lua",
+					git_root = "/path/to/repo",
+					get_blame_output = stub({}, "get_blame_output", older_and_uncommitted),
+				},
+			})
+			blame_view:mount()
+		end)
+
+		after_each(function()
+			blame_view:close()
+		end)
+
+		it("describes the view", function()
+			local view = blame_view:api()
+
+			assert.are.same({ blame_view.blame_bufnr, blame_view.file_bufnr }, view.buffers)
+			assert.are.equal("/path/to/repo/file.lua", view.file)
+			assert.are.equal("/path/to/repo", view.git_root)
+		end)
+
+		it("sets keymaps like vim.keymap.set, but only in the buffers of the view", function()
+			local view = blame_view:api()
+
+			view.keymap.set("n", "yc", "<Cmd>echo 'commit'<CR>", { desc = "Yank commit" })
+
+			local function keymap_in(bufnr)
+				return vim.api.nvim_buf_call(bufnr, function()
+					return vim.fn.maparg("yc", "n", false, true)
+				end)
+			end
+			for _, bufnr in ipairs({ blame_view.blame_bufnr, blame_view.file_bufnr }) do
+				assert.are.equal(1, keymap_in(bufnr).buffer)
+				assert.are.equal("Yank commit", keymap_in(bufnr).desc)
+			end
+			local other_bufnr = vim.api.nvim_create_buf(false, true)
+			assert.are.same({}, keymap_in(other_bufnr))
+			vim.api.nvim_buf_delete(other_bufnr, { force = true })
+		end)
+
+		it("returns the commit of the cursor line, also on the lines without annotation", function()
+			local view = blame_view:api()
+			vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 2, 0 })
+
+			assert.are.same({
+				hash = "1111111111111111111111111111111111111111",
+				author = "First",
+				time = 123456789,
+				summary = "first commit",
+			}, view:commit())
+		end)
+
+		it("returns no commit for a line that is not committed yet", function()
+			local view = blame_view:api()
+			vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 3, 0 })
+
+			assert.is_nil(view:commit())
+		end)
+
+		it("returns the commit whose version of the file is shown, none for the working tree", function()
+			local view = blame_view:api()
+			assert.is_nil(view:revision())
+
+			vim.api.nvim_set_current_win(blame_view.blame_winid)
+			vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
+			blame_view:navigate_forward()
+
+			assert.are.equal("3333333333333333333333333333333333333333", view:revision())
+		end)
+
+		it("lets tools find the repository through the directory of the windows of the view", function()
+			local git_root = vim.fn.resolve(vim.fn.tempname())
+			vim.fn.mkdir(git_root, "p")
+			local view_in_repository = BlameView:new({
+				git_instance = {
+					original_file = git_root .. "/file.lua",
+					git_root = git_root,
+					get_blame_output = stub({}, "get_blame_output", older_and_uncommitted),
+				},
+			})
+			local cwd = vim.fn.getcwd()
+
+			view_in_repository:mount()
+
+			assert.are.equal(git_root, vim.fn.getcwd(view_in_repository.blame_winid))
+			assert.are.equal(git_root, vim.fn.getcwd(view_in_repository.file_winid))
+			assert.are.equal(cwd, vim.fn.getcwd(-1))
+
+			view_in_repository:close()
+			vim.fn.delete(git_root, "rf")
+		end)
+
+		it("closes the view", function()
+			local tabpage = blame_view.tabpage
+
+			blame_view:api():close()
+
+			assert.is_false(vim.api.nvim_tabpage_is_valid(tabpage))
+		end)
+	end)
 end)

@@ -133,6 +133,15 @@ function BlameView:mount()
 	vim.wo[self.file_winid][0].statuscolumn = ""
 	vim.wo[self.file_winid][0].signcolumn = "yes:1"
 	vim.bo[self.blame_bufnr].filetype = "blame"
+	-- Tools called from the view, e.g. in `on_attach`, find the repository through the current directory,
+	-- because the buffers of the view have no file. Only the windows of the view change their directory.
+	if vim.fn.isdirectory(self.git_instance.git_root) == 1 then
+		for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
+			vim.api.nvim_win_call(winid, function()
+				vim.cmd.lcd(vim.fn.fnameescape(self.git_instance.git_root))
+			end)
+		end
+	end
 
 	self:update_view(nil, blame_output)
 
@@ -570,6 +579,55 @@ function BlameView:release()
 	end
 	self.commit_panel:destroy()
 	self.tabpage = nil
+end
+
+--- @class blame.Commit
+--- @field hash string
+--- @field author string|nil
+--- @field time number|nil Seconds since the epoch
+--- @field summary string|nil
+
+--- @class blame.View
+--- @field buffers number[] The buffers of the blame window and the file content window
+--- @field file string Absolute path of the blamed file
+--- @field git_root string
+--- @field keymap { set: fun(mode: string|string[], lhs: string, rhs: string|function, opts: table|nil) }
+--- @field commit fun(self: blame.View): blame.Commit|nil Commit of the cursor line, nil if not committed yet
+--- @field revision fun(self: blame.View): string|nil Commit whose version of the file is shown, nil for the working tree
+--- @field close fun(self: blame.View)
+
+--- Returns the view for the `on_attach` option of the user config: a small API that keeps the internals private.
+--- @return blame.View
+function BlameView:api()
+	local buffers = { self.blame_bufnr, self.file_bufnr }
+	return {
+		buffers = buffers,
+		file = self.git_instance.original_file,
+		git_root = self.git_instance.git_root,
+		keymap = {
+			-- Like `vim.keymap.set()`, but only in the buffers of the view
+			set = function(mode, lhs, rhs, opts)
+				for _, bufnr in ipairs(buffers) do
+					vim.keymap.set(mode, lhs, rhs, vim.tbl_extend("force", opts or {}, { buffer = bufnr }))
+				end
+			end,
+		},
+		commit = function()
+			local line = self:get_cursor_line()
+			if not line or is_uncommitted(line.header.commit) then
+				return nil
+			end
+			return { hash = line.header.commit, author = line.author, time = line.author_time, summary = line.summary }
+		end,
+		revision = function()
+			local current = self.breadcrumb:current()
+			local commit_info = current and current.commit_info
+			return commit_info and commit_info.previous and commit_info.previous.commit or nil
+		end,
+		close = function()
+			self:close()
+		end,
+	}
 end
 
 --- Closes the view and returns to the tab page it was opened from.

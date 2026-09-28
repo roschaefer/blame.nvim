@@ -71,6 +71,50 @@ return {
 }
 ```
 
+### Custom keymaps
+
+What to do with a commit depends on the tools you use, so `blame.nvim` leaves that to you: `on_attach` is called with the `view` whenever a blame view opens.
+
+```lua
+-- plugins/blame.lua
+return {
+  {
+    "roschaefer/blame.nvim",
+    opts = {
+      on_attach = function(view)
+        -- Yank the hash of the commit of the cursor line
+        view.keymap.set("n", "yc", function()
+          local commit = view:commit()
+          if commit then
+            vim.fn.setreg(vim.v.register, commit.hash)
+          end
+        end, { desc = "Yank commit hash" })
+
+        -- Show the diff of the version of the file that is shown, with gitsigns.nvim
+        view.keymap.set("n", "gd", function()
+          local revision = view:revision()
+          if revision then
+            vim.cmd("Gitsigns show_commit " .. revision)
+          end
+        end, { desc = "Show commit diff" })
+      end,
+    },
+    cmd = "Blame",
+  },
+}
+```
+
+| `view` | |
+| --- | --- |
+| `view.keymap.set(mode, lhs, rhs, opts)` | Like `vim.keymap.set()`, but only in the buffers of the view. Keymaps set here take precedence over the keymaps of `blame.nvim`. |
+| `view:commit()` | The commit of the cursor line, `{ hash, author, time, summary }`, or `nil` if the line is not committed yet. |
+| `view:revision()` | The hash of the commit whose version of the file is shown, or `nil` for the working tree. |
+| `view:close()` | Closes the view. |
+| `view.buffers` | The buffers of the blame window and the file content window. |
+| `view.file`, `view.git_root` | The path of the blamed file and the root of its repository. |
+
+The windows of the view have the root of the repository as their local directory (`:lcd`), so tools that look for the repository in the current directory work there, e.g. `:DiffviewOpen <hash>^!` of diffview.nvim or `:Git show <hash>` of vim-fugitive.
+
 ### Blame window
 
 The blame window has the filetype `blame`. You can customize it in `after/ftplugin/blame.lua`, the same way as any other filetype:
@@ -123,6 +167,8 @@ This works through the project-local [`.lazy.lua`](.lazy.lua) spec, which
 lazy.nvim merges into your configuration whenever Neovim starts inside this
 repository. The first time, Neovim asks you to trust `.lazy.lua`: choose
 `(v)iew` and run `:trust`.
+
+The project-local spec also installs gitsigns.nvim if it is missing and adds the keymaps from [Custom keymaps](#custom-keymaps) as a demo of `on_attach`: `yc` yanks the commit of the cursor line, `gd` shows the diff of the shown version.
 
 To run the unit tests:
 

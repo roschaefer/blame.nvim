@@ -18,7 +18,8 @@ M.defaults = {
 	},
 }
 
--- Function to set up the plugin with user configuration
+-- Function to set up the plugin with user configuration.
+-- `opts.on_attach(view)` is called whenever a blame view opens, see `blame.View` in `blame_view.lua`.
 function M.setup(opts)
 	M.options = vim.tbl_deep_extend("force", {}, M.defaults, opts or {})
 	vim.api.nvim_create_user_command("Blame", M.show_blame_info, {
@@ -72,7 +73,10 @@ function M.show_blame_info()
 		blame_view:close()
 	end)
 
-	blame_view:mount()
+	-- Called after the keymaps above and after mounting, which runs ftplugins, so the user's keymaps take precedence
+	if blame_view:mount() and M.options.on_attach then
+		M.options.on_attach(blame_view:api())
+	end
 end
 
 return M

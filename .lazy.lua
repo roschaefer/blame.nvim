@@ -24,7 +24,30 @@ return {
 		dir = root,
 		-- lazy.nvim ignores the packspec (`lazy.lua`) of local plugins, so
 		-- `setup()`, which creates the `:Blame` command, needs to be triggered here.
-		opts = {},
+		opts = {
+			-- Demo of `on_attach`, see "Custom keymaps" in the README
+			on_attach = function(view)
+				view.keymap.set("n", "yc", function()
+					local commit = view:commit()
+					if not commit then
+						vim.notify("Not committed yet")
+						return
+					end
+					vim.fn.setreg(vim.v.register, commit.hash)
+					vim.notify("Yanked " .. commit.hash .. " " .. (commit.summary or ""))
+				end, { desc = "Yank the commit of the cursor line" })
+				view.keymap.set("n", "gd", function()
+					local revision = view:revision()
+					if not revision then
+						vim.notify("The working tree is shown, not a commit")
+						return
+					end
+					vim.cmd("Gitsigns show_commit " .. revision)
+				end, { desc = "Show the diff of the shown version" })
+			end,
+		},
+		-- Installed only if missing from your own configuration
+		dependencies = { "lewis6991/gitsigns.nvim" },
 		cmd = "Blame",
 	},
 }

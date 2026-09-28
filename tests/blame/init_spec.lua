@@ -147,6 +147,28 @@ describe("blame.init", function()
 		vim.cmd("bwipeout README.md")
 	end)
 
+	it("lets on_attach of the user config add keymaps to the view, which take precedence", function()
+		local views = {}
+		blame.setup({
+			on_attach = function(view)
+				table.insert(views, view)
+				view.keymap.set("n", "q", "<Cmd>let g:init_spec_on_attach_q = 1<CR>")
+			end,
+		})
+		vim.cmd("edit README.md")
+		local original_tabpage = vim.api.nvim_get_current_tabpage()
+
+		blame.show_blame_info()
+
+		assert.are.equal(1, #views)
+		assert.are.equal(vim.fn.getcwd() .. "/README.md", views[1].file)
+		assert.are.equal("<Cmd>let g:init_spec_on_attach_q = 1<CR>", vim.fn.maparg("q", "n"))
+
+		views[1]:close()
+		assert.are.equal(original_tabpage, vim.api.nvim_get_current_tabpage())
+		vim.cmd("bwipeout README.md")
+	end)
+
 	it("shows a warning if the current file is not in a git repository", function()
 		local tmpdir = vim.fn.tempname()
 		vim.fn.mkdir(tmpdir, "p")
