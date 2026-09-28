@@ -90,11 +90,18 @@ return {
           end
         end, { desc = "Yank commit hash" })
 
-        -- Show the diff of the version of the file that is shown, with gitsigns.nvim.
+        -- Show the commit of the version of the file that is shown, read-only in a new tab page.
         -- The working tree has no commit, so show the last one.
         view.keymap.set("n", "gd", function()
-          vim.cmd("Gitsigns show_commit " .. (view:revision() or "HEAD"))
-        end, { desc = "Show commit diff" })
+          local revision = view:revision() or "HEAD"
+          local result = vim.system({ "git", "-C", view.git_root, "show", "--no-color", revision }, { text = true }):wait()
+          vim.cmd.tabnew()
+          vim.bo.buftype = "nofile"
+          vim.bo.bufhidden = "wipe"
+          vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(result.stdout, "\n"))
+          vim.bo.modifiable = false
+          vim.bo.filetype = "git"
+        end, { desc = "Show commit" })
       end,
     },
     cmd = "Blame",
@@ -111,7 +118,15 @@ return {
 | `view.buffers` | The buffers of the blame window and the file content window. |
 | `view.file`, `view.git_root` | The path of the blamed file and the root of its repository. |
 
-The windows of the view have the root of the repository as their local directory (`:lcd`), so tools that look for the repository in the current directory work there, e.g. `:DiffviewOpen <hash>^!` of diffview.nvim or `:Git show <hash>` of vim-fugitive.
+If you prefer your git plugin, call it from the keymap instead, e.g.:
+
+```lua
+vim.cmd("Gitsigns show_commit " .. revision) -- gitsigns.nvim
+vim.cmd("DiffviewOpen " .. revision .. "^!") -- diffview.nvim
+vim.cmd("Git show " .. revision) -- vim-fugitive
+```
+
+The windows of the view have the root of the repository as their local directory (`:lcd`), so these tools find the repository even if Neovim was started outside of it.
 
 ### Blame window
 
@@ -166,7 +181,7 @@ lazy.nvim merges into your configuration whenever Neovim starts inside this
 repository. The first time, Neovim asks you to trust `.lazy.lua`: choose
 `(v)iew` and run `:trust`.
 
-The project-local spec also installs gitsigns.nvim if it is missing and adds the keymaps from [Custom keymaps](#custom-keymaps) as a demo of `on_attach`: `yc` yanks the commit of the cursor line, `gd` shows the diff of the shown version, or of `HEAD` for the working tree.
+The project-local spec also adds the keymaps from [Custom keymaps](#custom-keymaps) as a demo of `on_attach`: `yc` yanks the commit of the cursor line, `gd` shows the commit of the shown version, or `HEAD` for the working tree.
 
 To run the unit tests:
 

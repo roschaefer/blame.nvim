@@ -38,12 +38,21 @@ return {
 				end, { desc = "Yank the commit of the cursor line" })
 				view.keymap.set("n", "gd", function()
 					-- The working tree has no commit, so show the last one
-					vim.cmd("Gitsigns show_commit " .. (view:revision() or "HEAD"))
+					local revision = view:revision() or "HEAD"
+					local result = vim.system(
+						{ "git", "-C", view.git_root, "show", "--no-color", revision },
+						{ text = true }
+					)
+						:wait()
+					vim.cmd.tabnew()
+					vim.bo.buftype = "nofile"
+					vim.bo.bufhidden = "wipe"
+					vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(result.stdout, "\n"))
+					vim.bo.modifiable = false
+					vim.bo.filetype = "git"
 				end, { desc = "Show the diff of the shown version" })
 			end,
 		},
-		-- Installed only if missing from your own configuration
-		dependencies = { "lewis6991/gitsigns.nvim" },
 		cmd = "Blame",
 	},
 }
