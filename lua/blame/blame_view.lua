@@ -566,18 +566,22 @@ function BlameView:check_windows()
 	end
 end
 
---- Gives a window of the view the local directory back that the window `:Blame` was run from had, if any.
+--- Gives a window of the view its directories back: the one of its tab page (`:tcd`), and the one of the window
+--- `:Blame` was run from (`:lcd`), if any.
 --- @param winid number
 function BlameView:restore_local_dir(winid)
 	if not self.changed_local_dir then
 		return
 	end
 	vim.api.nvim_win_call(winid, function()
+		local tab_dir = vim.fn.haslocaldir(-1, 0) == 1 and vim.fn.getcwd(-1, 0) or nil
+		-- `:cd` clears the directories of the current window and tab page, the global directory stays the same
+		vim.cmd.cd(vim.fn.fnameescape(vim.fn.getcwd(-1, -1)))
+		if tab_dir then
+			vim.cmd.tcd(vim.fn.fnameescape(tab_dir))
+		end
 		if self.previous_local_dir then
 			vim.cmd.lcd(vim.fn.fnameescape(self.previous_local_dir))
-		else
-			-- `:cd` clears the local directory of the current window, the global directory stays the same
-			vim.cmd.cd(vim.fn.fnameescape(vim.fn.getcwd(-1, -1)))
 		end
 	end)
 end

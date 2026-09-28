@@ -1349,6 +1349,19 @@ describe("blame.blame_view", function()
 			assert.are.equal(vim.fn.getcwd(-1), vim.fn.getcwd(winid))
 		end)
 
+		it("keeps the directory of the tab page of a window that is handed over", function()
+			local tab_dir = git_root .. "/tab"
+			vim.fn.mkdir(tab_dir, "p")
+			vim.cmd.tcd(vim.fn.fnameescape(tab_dir))
+			blame_view:mount()
+
+			local winid = hand_over_file_window()
+
+			assert.are.equal(tab_dir, vim.fn.getcwd(winid))
+			assert.are.equal(0, vim.fn.haslocaldir(winid))
+			assert.are.equal(cwd, vim.fn.getcwd(-1, -1))
+		end)
+
 		it("restores the local directory of the window the view was opened from", function()
 			local local_dir = git_root .. "/local"
 			vim.fn.mkdir(local_dir, "p")
