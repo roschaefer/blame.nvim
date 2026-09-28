@@ -5,6 +5,7 @@
 ## Features
 
 * **Git Blame Integration:** Displays the date (relative to today), author and commit subject next to each block of lines from the same commit, like GitHub's blame view.
+* **Commit Grouping:** A bar in the sign column of the file content window marks all lines of the commit under the cursor, to show which lines belong together.
 * **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
 * **Commit Message Panel:** Shows the full commit message of the cursor line on demand (`K`), to answer why a line is there.
 * **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<C-o>` to go backward) through revisions of a file.
@@ -77,6 +78,8 @@ vim.opt_local.cursorline = false
 ```
 
 Buffer-local keymaps defined there take precedence over the keymaps of `blame.nvim`.
+
+The bar next to the lines of the commit under the cursor is drawn in the sign column of the file content window and highlighted with `GitBlameCursorCommit` (linked to `Special`).
 
 The columns of the blame window are highlighted with `GitBlameDate` (linked to `Normal`), `GitBlameAuthor` (linked to `Comment`) and `GitBlameSubject` (linked to `Normal`).
 

@@ -58,6 +58,9 @@ function BlameView:new(dependencies)
 		previous_tabpage = nil,
 		augroup = nil,
 		ns_id = vim.api.nvim_create_namespace("blame"),
+		cursor_commit_ns_id = vim.api.nvim_create_namespace("blame_cursor_commit"),
+		highlighted_commit = nil,
+		highlighted_blame_lines = nil,
 		breadcrumb = Breadcrumb:new(),
 		commit_panel = CommitPanel:new({ git_instance = dependencies.git_instance }),
 		blame_lines = {},
@@ -111,12 +114,17 @@ function BlameView:mount()
 	blame_wo.colorcolumn = ""
 	blame_wo.winfixwidth = true
 	vim.wo[self.file_winid][0].number = true
+	-- Room for the bar next to the lines of the commit of the cursor line, always shown so the code never shifts.
+	-- An inherited 'statuscolumn' without `%s` would hide it.
+	vim.wo[self.file_winid][0].statuscolumn = ""
+	vim.wo[self.file_winid][0].signcolumn = "yes:1"
 	vim.bo[self.blame_bufnr].filetype = "blame"
 
 	self:update_view(nil, blame_output)
 
 	utils.initialize_cursor_position(current_file_win, self.blame_winid)
 	utils.initialize_cursor_position(current_file_win, self.file_winid)
+	self:highlight_cursor_commit()
 
 	-- Closing a window of the view or opening another buffer in it, e.g. from a file explorer, leaves the view.
 	-- Both only queue a check of the resulting windows, so the order of the events does not matter.
@@ -142,14 +150,14 @@ function BlameView:mount()
 		group = self.augroup,
 		buffer = self.blame_bufnr,
 		callback = function()
-			self:show_commit_message()
+			self:follow_cursor()
 		end,
 	})
 	vim.api.nvim_create_autocmd("CursorMoved", {
 		group = self.augroup,
 		buffer = self.file_bufnr,
 		callback = function()
-			self:show_commit_message()
+			self:follow_cursor()
 		end,
 	})
 	return true
@@ -256,6 +264,39 @@ function BlameView:render_blame()
 	end
 end
 
+--- Marks all lines of the commit of the cursor line with a bar in the sign column of the file content window,
+--- right next to the blame window, so the lines that belong together can be told apart without colouring the text.
+function BlameView:highlight_cursor_commit()
+	local cursor_line = self:get_cursor_line()
+	local commit = cursor_line and cursor_line.header.commit
+	-- Redrawn only for another commit or another version, because a commit can have thousands of lines
+	if commit == self.highlighted_commit and self.blame_lines == self.highlighted_blame_lines then
+		return
+	end
+	self.highlighted_commit = commit
+	self.highlighted_blame_lines = self.blame_lines
+
+	vim.api.nvim_buf_clear_namespace(self.file_bufnr, self.cursor_commit_ns_id, 0, -1)
+	if not cursor_line then
+		return
+	end
+	vim.api.nvim_set_hl(0, "GitBlameCursorCommit", { link = "Special", default = true })
+	for i, line in ipairs(self.blame_lines) do
+		if line.header.commit == cursor_line.header.commit then
+			vim.api.nvim_buf_set_extmark(self.file_bufnr, self.cursor_commit_ns_id, i - 1, 0, {
+				sign_text = "▎",
+				sign_hl_group = "GitBlameCursorCommit",
+			})
+		end
+	end
+end
+
+--- Updates everything that depends on the cursor line.
+function BlameView:follow_cursor()
+	self:highlight_cursor_commit()
+	self:show_commit_message()
+end
+
 --- Sets the window options the view depends on, overriding the user config.
 function BlameView:enforce_view_options()
 	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
@@ -336,7 +377,7 @@ function BlameView:navigate_forward()
 		if commit_info and commit_info.header and commit_info.header.source_line then
 			self:set_cursor({ commit_info.header.source_line, 0 })
 		end
-		self:show_commit_message()
+		self:follow_cursor()
 	end
 end
 
@@ -355,7 +396,7 @@ function BlameView:navigate_backward()
 	if current.cursor_pos then
 		self:set_cursor(current.cursor_pos)
 	end
-	self:show_commit_message()
+	self:follow_cursor()
 end
 
 --- Returns the windows of the view, each with the buffer it shows as long as it is part of the view.

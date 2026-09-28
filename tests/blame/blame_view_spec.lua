@@ -154,6 +154,118 @@ describe("blame.blame_view", function()
 		end)
 	end)
 
+	describe("commit of the cursor line", function()
+		local commit_twice = table.concat({
+			"1111111111111111111111111111111111111111 1 1 1",
+			"author First",
+			"summary first",
+			"filename file.lua",
+			"\tline content 1",
+			"2222222222222222222222222222222222222222 1 2 1",
+			"author Second",
+			"summary second",
+			"filename file.lua",
+			"\tline content 2",
+			"1111111111111111111111111111111111111111 2 3 1",
+			"filename file.lua",
+			"\tline content 3",
+		}, "\n")
+
+		local function highlighted_rows(blame_view)
+			return vim.tbl_map(
+				function(extmark)
+					assert.are.equal("▎", vim.trim(extmark[4].sign_text))
+					assert.are.equal("GitBlameCursorCommit", extmark[4].sign_hl_group)
+					return extmark[2]
+				end,
+				vim.api.nvim_buf_get_extmarks(
+					blame_view.file_bufnr,
+					blame_view.cursor_commit_ns_id,
+					0,
+					-1,
+					{ details = true }
+				)
+			)
+		end
+
+		it(
+			"marks all lines of the commit of the cursor line with a bar in the sign column of the file content window",
+			function()
+				local mock_git = {
+					original_file = "/path/to/repo/file.lua",
+					git_root = "/path/to/repo",
+					get_blame_output = stub({}, "get_blame_output", commit_twice),
+				}
+				local blame_view = BlameView:new({ git_instance = mock_git })
+				blame_view:mount()
+
+				vim.api.nvim_set_current_win(blame_view.file_winid)
+				vim.api.nvim_win_set_cursor(blame_view.file_winid, { 3, 0 })
+				vim.api.nvim_exec_autocmds("CursorMoved", { buffer = blame_view.file_bufnr })
+
+				assert.are.same({ 0, 2 }, highlighted_rows(blame_view))
+				assert.are.same(
+					{ link = "Special", default = true },
+					vim.api.nvim_get_hl(0, { name = "GitBlameCursorCommit" })
+				)
+
+				vim.api.nvim_win_set_cursor(blame_view.file_winid, { 2, 0 })
+				vim.api.nvim_exec_autocmds("CursorMoved", { buffer = blame_view.file_bufnr })
+
+				assert.are.same({ 1 }, highlighted_rows(blame_view))
+
+				blame_view:close()
+			end
+		)
+
+		it("does not redraw the bar while the cursor stays within the same commit", function()
+			local mock_git = {
+				original_file = "/path/to/repo/file.lua",
+				git_root = "/path/to/repo",
+				get_blame_output = stub({}, "get_blame_output", commit_twice),
+			}
+			local blame_view = BlameView:new({ git_instance = mock_git })
+			blame_view:mount()
+			vim.api.nvim_set_current_win(blame_view.file_winid)
+			local set_extmark = spy.on(vim.api, "nvim_buf_set_extmark")
+
+			vim.api.nvim_win_set_cursor(blame_view.file_winid, { 3, 0 })
+			blame_view:follow_cursor()
+
+			assert.spy(set_extmark).was.called(0)
+
+			vim.api.nvim_win_set_cursor(blame_view.file_winid, { 2, 0 })
+			blame_view:follow_cursor()
+
+			assert.spy(set_extmark).was.called(1)
+			assert.are.same({ 1 }, highlighted_rows(blame_view))
+
+			blame_view:close()
+		end)
+
+		it("marks the commit of the cursor line right after opening and navigating", function()
+			local mock_git = {
+				original_file = "/path/to/repo/file.lua",
+				git_root = "/path/to/repo",
+				get_blame_output = stub({}, "get_blame_output", commit_twice),
+			}
+			local blame_view = BlameView:new({ git_instance = mock_git })
+
+			blame_view:mount()
+
+			assert.are.same({ 0, 2 }, highlighted_rows(blame_view))
+
+			blame_view.blame_lines[1].previous = { commit = "prev_hash", filename = "file.lua" }
+			mock_git.get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3))
+			vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 0 })
+			blame_view:navigate_forward()
+
+			assert.are.same({ 0, 1, 2 }, highlighted_rows(blame_view))
+
+			blame_view:close()
+		end)
+	end)
+
 	it("falls back to regex syntax highlighting without a tree-sitter parser", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.cob",
@@ -291,6 +403,7 @@ describe("blame.blame_view", function()
 		vim.wo[source_winid].diff = true
 		vim.wo[source_winid].statuscolumn = "%l "
 		vim.wo[source_winid].colorcolumn = "80"
+		vim.wo[source_winid].signcolumn = "auto"
 
 		blame_view:mount()
 
@@ -298,6 +411,10 @@ describe("blame.blame_view", function()
 		assert.is_false(vim.wo[blame_view.file_winid].diff)
 		assert.are.equal("", vim.wo[blame_view.blame_winid].statuscolumn)
 		assert.are.equal("", vim.wo[blame_view.blame_winid].colorcolumn)
+		assert.are.equal("no", vim.wo[blame_view.blame_winid].signcolumn)
+		assert.are.equal("yes:1", vim.wo[blame_view.file_winid].signcolumn)
+		-- The inherited "%l " would hide the bar in the sign column
+		assert.are.equal("", vim.wo[blame_view.file_winid].statuscolumn)
 
 		blame_view:close()
 		vim.api.nvim_win_close(source_winid, true)
