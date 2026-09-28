@@ -9,7 +9,7 @@
 * **Commit Age:** A coloured stripe in the blame window shows the age of each commit relative to the other commits of the file, faint for older and strong for newer, like GitHub's blame view. A legend in the title of the blame window explains the colours, if there is room for it (Neovim 0.12 or newer).
 * **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
 * **Commit Message Panel:** Shows the full commit message of the cursor line on demand (`K`), to answer why a line is there.
-* **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<C-o>` to go backward) through revisions of a file.
+* **Blame Prior:** Like "View blame prior to this change" on GitHub, `<CR>` blames the file as it was prior to the commit under the cursor, to dig deeper into the history of a line. `<C-o>` goes back again, like a tag stack.
 * **Custom Keymaps:** Configurable keybindings for navigation and closing.
 
 ## Installation
@@ -36,8 +36,8 @@ return {
 
 Navigate through the commit history:
 
-* Press `<CR>` (or `<C-]>`) on any line to view the file as it was before the commit that last changed this line.
-* Press `<C-o>` (or `<C-t>`, `<BS>`) to go back to the previous commit in the history.
+* Press `<CR>` (or `<C-]>`) on any line to view the blame prior to its commit: the view shows the blame of the file as it was in the parent of the commit that last changed this line. The title of the blame window shows the hash of that parent, not of the commit under the cursor.
+* Press `<C-o>` (or `<C-t>`, `<BS>`) to go back to the version you came from.
 * Both work in the blame window and in the file content window, similar to following a tag with `<C-]>` and popping the tag stack with `<C-t>`.
 * In the blame window, `j` and `k` (or `<Down>` and `<Up>`) skip the empty lines and move from commit to commit, i.e. to the first line of the next or previous block. Inside a block, `k` first moves to the first line of that block. They take a count, e.g. `3j`. In the file content window they move line by line as usual.
 * Switch between the blame window and the file content window with the usual window commands, e.g. `<C-w>h` and `<C-w>l`.
