@@ -24,7 +24,35 @@ return {
 		dir = root,
 		-- lazy.nvim ignores the packspec (`lazy.lua`) of local plugins, so
 		-- `setup()`, which creates the `:Blame` command, needs to be triggered here.
-		opts = {},
+		opts = {
+			-- Demo of `on_attach`, see "Custom keymaps" in the README
+			on_attach = function(view)
+				view.keymap.set("n", "yc", function()
+					local commit = view:commit()
+					if not commit then
+						vim.notify("Not committed yet")
+						return
+					end
+					vim.fn.setreg(vim.v.register, commit.hash)
+					vim.notify("Yanked " .. commit.hash .. " " .. (commit.summary or ""))
+				end, { desc = "Yank the commit of the cursor line" })
+				view.keymap.set("n", "gd", function()
+					-- The working tree has no commit, so show the last one
+					local revision = view:revision() or "HEAD"
+					local result = vim.system(
+						{ "git", "-C", view.git_root, "show", "--no-color", revision },
+						{ text = true }
+					)
+						:wait()
+					vim.cmd.tabnew()
+					vim.bo.buftype = "nofile"
+					vim.bo.bufhidden = "wipe"
+					vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(result.stdout, "\n"))
+					vim.bo.modifiable = false
+					vim.bo.filetype = "git"
+				end, { desc = "Show the diff of the shown version" })
+			end,
+		},
 		cmd = "Blame",
 	},
 }
