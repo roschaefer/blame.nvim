@@ -1281,34 +1281,83 @@ describe("blame.blame_view", function()
 			assert.are.equal("3333333333333333333333333333333333333333", view:revision())
 		end)
 
-		it("lets tools find the repository through the directory of the windows of the view", function()
-			local git_root = vim.fn.resolve(vim.fn.tempname())
-			vim.fn.mkdir(git_root, "p")
-			local view_in_repository = BlameView:new({
-				git_instance = {
-					original_file = git_root .. "/file.lua",
-					git_root = git_root,
-					get_blame_output = stub({}, "get_blame_output", older_and_uncommitted),
-				},
-			})
-			local cwd = vim.fn.getcwd()
-
-			view_in_repository:mount()
-
-			assert.are.equal(git_root, vim.fn.getcwd(view_in_repository.blame_winid))
-			assert.are.equal(git_root, vim.fn.getcwd(view_in_repository.file_winid))
-			assert.are.equal(cwd, vim.fn.getcwd(-1))
-
-			view_in_repository:close()
-			vim.fn.delete(git_root, "rf")
-		end)
-
 		it("closes the view", function()
 			local tabpage = blame_view.tabpage
 
 			blame_view:api():close()
 
 			assert.is_false(vim.api.nvim_tabpage_is_valid(tabpage))
+		end)
+	end)
+
+	describe("local directory", function()
+		local git_root, blame_view, other_bufnr, cwd
+
+		before_each(function()
+			cwd = vim.fn.getcwd(-1, -1)
+			git_root = vim.fn.resolve(vim.fn.tempname())
+			vim.fn.mkdir(git_root, "p")
+			blame_view = BlameView:new({
+				git_instance = {
+					original_file = git_root .. "/file.lua",
+					git_root = git_root,
+					get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(3)),
+				},
+			})
+			other_bufnr = vim.api.nvim_create_buf(true, false)
+		end)
+
+		after_each(function()
+			local tabpage = blame_view.tabpage
+			blame_view:close()
+			if tabpage == nil then
+				-- The tab page stays after the view is handed over
+				vim.cmd("tabclose!")
+			end
+			vim.api.nvim_buf_delete(other_bufnr, { force = true })
+			-- Also clears a local directory of the test
+			vim.cmd.cd(vim.fn.fnameescape(cwd))
+			vim.fn.delete(git_root, "rf")
+		end)
+
+		local function hand_over_file_window()
+			local file_winid = blame_view.file_winid
+			vim.api.nvim_set_current_win(file_winid)
+			vim.api.nvim_win_set_buf(file_winid, other_bufnr)
+			vim.wait(100, function()
+				return blame_view.tabpage == nil
+			end)
+			return file_winid
+		end
+
+		it("uses the root of the repository in the windows of the view only", function()
+			local cwd = vim.fn.getcwd()
+
+			blame_view:mount()
+
+			assert.are.equal(git_root, vim.fn.getcwd(blame_view.blame_winid))
+			assert.are.equal(git_root, vim.fn.getcwd(blame_view.file_winid))
+			assert.are.equal(cwd, vim.fn.getcwd(-1))
+		end)
+
+		it("clears the local directory of a window that is handed over", function()
+			blame_view:mount()
+
+			local winid = hand_over_file_window()
+
+			assert.are.equal(0, vim.fn.haslocaldir(winid))
+			assert.are.equal(vim.fn.getcwd(-1), vim.fn.getcwd(winid))
+		end)
+
+		it("restores the local directory of the window the view was opened from", function()
+			local local_dir = git_root .. "/local"
+			vim.fn.mkdir(local_dir, "p")
+			vim.cmd.lcd(vim.fn.fnameescape(local_dir))
+			blame_view:mount()
+
+			local winid = hand_over_file_window()
+
+			assert.are.equal(local_dir, vim.fn.getcwd(winid))
 		end)
 	end)
 end)

@@ -74,6 +74,8 @@ function BlameView:new(dependencies)
 		cursor_commit_ns_id = vim.api.nvim_create_namespace("blame_cursor_commit"),
 		highlighted_commit = nil,
 		highlighted_blame_lines = nil,
+		previous_local_dir = nil,
+		changed_local_dir = false,
 		breadcrumb = Breadcrumb:new(),
 		commit_panel = CommitPanel:new({ git_instance = dependencies.git_instance }),
 		blame_lines = {},
@@ -99,6 +101,8 @@ function BlameView:mount()
 
 	local current_file_win = vim.api.nvim_get_current_win()
 	local cursor_pos = vim.api.nvim_win_get_cursor(current_file_win)
+	-- Restored in windows that are handed over to other buffers
+	self.previous_local_dir = vim.fn.haslocaldir(current_file_win) == 1 and vim.fn.getcwd(current_file_win) or nil
 	self.breadcrumb:push({ commit_info = nil, cursor_pos = cursor_pos })
 
 	-- A new tab page leaves the user's window layout untouched
@@ -136,6 +140,7 @@ function BlameView:mount()
 	-- Tools called from the view, e.g. in `on_attach`, find the repository through the current directory,
 	-- because the buffers of the view have no file. Only the windows of the view change their directory.
 	if vim.fn.isdirectory(self.git_instance.git_root) == 1 then
+		self.changed_local_dir = true
 		for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
 			vim.api.nvim_win_call(winid, function()
 				vim.cmd.lcd(vim.fn.fnameescape(self.git_instance.git_root))
@@ -561,6 +566,22 @@ function BlameView:check_windows()
 	end
 end
 
+--- Gives a window of the view the local directory back that the window `:Blame` was run from had, if any.
+--- @param winid number
+function BlameView:restore_local_dir(winid)
+	if not self.changed_local_dir then
+		return
+	end
+	vim.api.nvim_win_call(winid, function()
+		if self.previous_local_dir then
+			vim.cmd.lcd(vim.fn.fnameescape(self.previous_local_dir))
+		else
+			-- `:cd` clears the local directory of the current window, the global directory stays the same
+			vim.cmd.cd(vim.fn.fnameescape(vim.fn.getcwd(-1, -1)))
+		end
+	end)
+end
+
 --- Closes the view, except for its windows that show other buffers now, which become normal windows.
 --- The tab page stays, e.g. with the file explorer the buffers were opened from.
 function BlameView:release()
@@ -572,8 +593,11 @@ function BlameView:release()
 		if vim.api.nvim_win_is_valid(winid) then
 			if self:is_view_buffer(vim.api.nvim_win_get_buf(winid)) then
 				vim.api.nvim_win_close(winid, true)
-			elseif winid == self.commit_panel.winid then
-				self.commit_panel.winid = nil
+			else
+				self:restore_local_dir(winid)
+				if winid == self.commit_panel.winid then
+					self.commit_panel.winid = nil
+				end
 			end
 		end
 	end
