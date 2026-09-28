@@ -413,6 +413,8 @@ describe("blame.blame_view", function()
 		assert.are.equal("", vim.wo[blame_view.blame_winid].colorcolumn)
 		assert.are.equal("no", vim.wo[blame_view.blame_winid].signcolumn)
 		assert.are.equal("yes:1", vim.wo[blame_view.file_winid].signcolumn)
+		-- The inherited "%l " would hide the bar in the sign column
+		assert.are.equal("", vim.wo[blame_view.file_winid].statuscolumn)
 
 		blame_view:close()
 		vim.api.nvim_win_close(source_winid, true)

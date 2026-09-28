@@ -114,7 +114,9 @@ function BlameView:mount()
 	blame_wo.colorcolumn = ""
 	blame_wo.winfixwidth = true
 	vim.wo[self.file_winid][0].number = true
-	-- Room for the bar next to the lines of the commit of the cursor line, always shown so the code never shifts
+	-- Room for the bar next to the lines of the commit of the cursor line, always shown so the code never shifts.
+	-- An inherited 'statuscolumn' without `%s` would hide it.
+	vim.wo[self.file_winid][0].statuscolumn = ""
 	vim.wo[self.file_winid][0].signcolumn = "yes:1"
 	vim.bo[self.blame_bufnr].filetype = "blame"
 
