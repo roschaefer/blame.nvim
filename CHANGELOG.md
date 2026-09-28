@@ -1,5 +1,21 @@
 # Changelog
 
+## [2.1.0](https://github.com/roschaefer/blame.nvim/compare/v2.0.0...v2.1.0) (2026-09-28)
+
+
+### Features
+
+* **view:** mark the lines of the commit under the cursor ([#57](https://github.com/roschaefer/blame.nvim/issues/57)) ([228f4da](https://github.com/roschaefer/blame.nvim/commit/228f4dabe85b0ece491249cd33da13a89c8aa2ee))
+* **view:** move from block to block with j and k in the blame window ([#58](https://github.com/roschaefer/blame.nvim/issues/58)) ([20f7ab8](https://github.com/roschaefer/blame.nvim/commit/20f7ab8133dbecc26a70d52a1d609e380787b9d3))
+* **view:** show date, author and subject like GitHub's blame view ([#56](https://github.com/roschaefer/blame.nvim/issues/56)) ([158a644](https://github.com/roschaefer/blame.nvim/commit/158a644c0d2b94be631455cbb67278c8fda3bb6b)), closes [#47](https://github.com/roschaefer/blame.nvim/issues/47)
+* **view:** show the age of each commit in a coloured stripe ([#59](https://github.com/roschaefer/blame.nvim/issues/59)) ([9e219d8](https://github.com/roschaefer/blame.nvim/commit/9e219d850fdc5ce9433c98e577be313b3022e66f))
+* **view:** show the commit message of the cursor line on demand ([#52](https://github.com/roschaefer/blame.nvim/issues/52)) ([4d7162a](https://github.com/roschaefer/blame.nvim/commit/4d7162a52885a9974d4e9a99390f90d840f1c6f7)), closes [#13](https://github.com/roschaefer/blame.nvim/issues/13)
+
+
+### Bug Fixes
+
+* **view:** let files opened from an explorer replace the view ([#55](https://github.com/roschaefer/blame.nvim/issues/55)) ([cb58db6](https://github.com/roschaefer/blame.nvim/commit/cb58db6107522cd173204a549dec9916ebe4aac6))
+
 ## [2.0.0](https://github.com/roschaefer/blame.nvim/compare/v1.2.0...v2.0.0) (2026-09-24)
 
 
