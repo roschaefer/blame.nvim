@@ -90,17 +90,13 @@ return {
           end
         end, { desc = "Yank commit hash" })
 
-        -- Show the commit of the version of the file that is shown, read-only in a new tab page.
+        -- Show the commit of the version of the file that is shown, with your git plugin.
         -- The working tree has no commit, so show the last one.
         view.keymap.set("n", "gd", function()
           local revision = view:revision() or "HEAD"
-          local result = vim.system({ "git", "-C", view.git_root, "show", "--no-color", revision }, { text = true }):wait()
-          vim.cmd.tabnew()
-          vim.bo.buftype = "nofile"
-          vim.bo.bufhidden = "wipe"
-          vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(result.stdout, "\n"))
-          vim.bo.modifiable = false
-          vim.bo.filetype = "git"
+          -- vim.cmd("Gitsigns show_commit " .. revision) -- gitsigns.nvim
+          -- vim.cmd("DiffviewOpen " .. revision .. "^!") -- diffview.nvim
+          -- vim.cmd("Git show " .. revision) -- vim-fugitive
         end, { desc = "Show commit" })
       end,
     },
@@ -118,15 +114,7 @@ return {
 | `view.buffers` | The buffers of the blame window and the file content window. |
 | `view.file`, `view.git_root` | The path of the blamed file and the root of its repository. |
 
-If you prefer your git plugin, call it from the keymap instead, e.g.:
-
-```lua
-vim.cmd("Gitsigns show_commit " .. revision) -- gitsigns.nvim
-vim.cmd("DiffviewOpen " .. revision .. "^!") -- diffview.nvim
-vim.cmd("Git show " .. revision) -- vim-fugitive
-```
-
-The windows of the view have the root of the repository as their local directory (`:lcd`), so these tools find the repository even if Neovim was started outside of it.
+The windows of the view have the root of the repository as their local directory (`:lcd`), so git plugins find the repository even if Neovim was started outside of it.
 
 ### Blame window
 
