@@ -1,6 +1,7 @@
 -- tests/blame/age_spec.lua
 
 local assert = require("luassert")
+local stub = require("luassert.stub")
 local age = require("blame.age")
 
 describe("blame.age", function()
@@ -40,35 +41,51 @@ describe("blame.age", function()
 	describe("legend", function()
 		it("shows the colours from older to newer, like GitHub's blame view", function()
 			assert.are.equal(
-				"Older %#GitBlameAgeLegend1#▎%#GitBlameAgeLegend2#▎%#GitBlameAgeLegend3#▎%#GitBlameAgeLegend4#▎"
-					.. "%#GitBlameAgeLegend5#▎%#GitBlameAgeLegend6#▎%#GitBlameAgeLegend7#▎%#GitBlameAgeLegend8#▎"
-					.. "%#GitBlameAgeLegend9#▎%#GitBlameAgeLegend10#▎%* Newer ",
+				"Older %$GitBlameAge1$▎%$GitBlameAge2$▎%$GitBlameAge3$▎%$GitBlameAge4$▎%$GitBlameAge5$▎"
+					.. "%$GitBlameAge6$▎%$GitBlameAge7$▎%$GitBlameAge8$▎%$GitBlameAge9$▎%$GitBlameAge10$▎%* Newer ",
 				age.legend()
 			)
 		end)
 	end)
 
 	describe("winbar_legend", function()
+		local snapshot
+		before_each(function()
+			snapshot = assert:snapshot()
+		end)
+		after_each(function()
+			snapshot:revert()
+		end)
+
 		it("evaluates the legend whenever the winbar is drawn, with the width of the title", function()
 			assert.are.equal("%{%v:lua.require'blame.age'.legend_if_fits(13)%}", age.winbar_legend(13))
+		end)
+
+		it("shows no legend before Neovim 0.12, which cannot keep the background of the winbar", function()
+			stub(vim.fn, "has").returns(0)
+
+			assert.are.equal("", age.winbar_legend(13))
 		end)
 	end)
 
 	describe("define_highlights", function()
-		local termguicolors, background
+		local termguicolors, background, sign_column
 		before_each(function()
 			termguicolors = vim.o.termguicolors
 			background = vim.api.nvim_get_hl(0, { name = "Normal" })
+			sign_column = vim.api.nvim_get_hl(0, { name = "SignColumn" })
 			vim.api.nvim_set_hl(0, "GitBlameAge", { fg = 0xff0000 })
 			vim.api.nvim_set_hl(0, "Normal", { bg = 0x000000 })
+			vim.api.nvim_set_hl(0, "SignColumn", {})
 		end)
 		after_each(function()
 			vim.o.termguicolors = termguicolors
 			vim.api.nvim_set_hl(0, "Normal", background)
+			vim.api.nvim_set_hl(0, "SignColumn", sign_column)
 			vim.api.nvim_set_hl(0, "GitBlameAge", {})
 		end)
 
-		it("blends the buckets from the background towards the colour of GitBlameAge", function()
+		it("blends the buckets from the background of the window towards the colour of GitBlameAge", function()
 			vim.o.termguicolors = true
 
 			age.define_highlights()
@@ -77,16 +94,14 @@ describe("blame.age", function()
 			assert.are.equal(0xff0000, vim.api.nvim_get_hl(0, { name = "GitBlameAge10" }).fg)
 		end)
 
-		it("gives the legend the colours of the buckets on the background of the winbar", function()
+		it("blends against the background of the sign column, where the stripe is drawn, if it has its own", function()
 			vim.o.termguicolors = true
-			local winbar = vim.api.nvim_get_hl(0, { name = "WinBar" })
-			vim.api.nvim_set_hl(0, "WinBar", { bg = 0x202020 })
+			vim.api.nvim_set_hl(0, "SignColumn", { bg = 0x202020 })
 
 			age.define_highlights()
 
-			assert.are.same({ fg = 0x400000, bg = 0x202020 }, vim.api.nvim_get_hl(0, { name = "GitBlameAgeLegend1" }))
-			assert.are.same({ fg = 0xff0000, bg = 0x202020 }, vim.api.nvim_get_hl(0, { name = "GitBlameAgeLegend10" }))
-			vim.api.nvim_set_hl(0, "WinBar", winbar)
+			assert.are.equal(0x581818, vim.api.nvim_get_hl(0, { name = "GitBlameAge1" }).fg)
+			assert.are.equal(0xff0000, vim.api.nvim_get_hl(0, { name = "GitBlameAge10" }).fg)
 		end)
 
 		it("links all buckets to GitBlameAge without RGB colours", function()
@@ -96,7 +111,6 @@ describe("blame.age", function()
 
 			assert.are.same({ link = "GitBlameAge" }, vim.api.nvim_get_hl(0, { name = "GitBlameAge1" }))
 			assert.are.same({ link = "GitBlameAge" }, vim.api.nvim_get_hl(0, { name = "GitBlameAge10" }))
-			assert.are.same({ link = "GitBlameAge" }, vim.api.nvim_get_hl(0, { name = "GitBlameAgeLegend1" }))
 		end)
 	end)
 end)

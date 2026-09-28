@@ -48,13 +48,6 @@ function M.highlight_group(bucket)
 	return "GitBlameAge" .. bucket
 end
 
---- Returns the highlight group of a bucket in the legend, which keeps the background of the winbar.
---- @param bucket number
---- @return string
-function M.legend_highlight_group(bucket)
-	return "GitBlameAgeLegend" .. bucket
-end
-
 local OLDER = "Older "
 local NEWER = " Newer "
 
@@ -63,7 +56,8 @@ local NEWER = " Newer "
 function M.legend()
 	local bars = {}
 	for bucket = 1, M.BUCKETS do
-		table.insert(bars, "%#" .. M.legend_highlight_group(bucket) .. "#▎")
+		-- `%$Group$` keeps the background of the winbar, also of an inactive window's (`WinBarNC`)
+		table.insert(bars, "%$" .. M.highlight_group(bucket) .. "$▎")
 	end
 	return OLDER .. table.concat(bars) .. "%*" .. NEWER
 end
@@ -83,14 +77,17 @@ function M.legend_if_fits(title_width)
 end
 
 --- Returns 'winbar' items for the legend, evaluated whenever the window is redrawn, so it appears and disappears
---- when the window is resized.
+--- when the window is resized. Empty before Neovim 0.12, which cannot draw the legend on the background of the winbar.
 --- @param title_width number
 --- @return string
 function M.winbar_legend(title_width)
+	if vim.fn.has("nvim-0.12") == 0 then
+		return ""
+	end
 	return string.format("%%{%%v:lua.require'blame.age'.legend_if_fits(%d)%%}", title_width)
 end
 
---- Defines one highlight group per bucket, blended from the background towards `GitBlameAge`,
+--- Defines one highlight group per bucket, blended from the background of the sign column towards `GitBlameAge`,
 --- so the colours follow the colour scheme in light and dark themes.
 function M.define_highlights()
 	vim.api.nvim_set_hl(0, "GitBlameAge", { link = "DiagnosticWarn", default = true })
@@ -99,21 +96,18 @@ function M.define_highlights()
 		-- Blending needs RGB colours, so all buckets look the same
 		for bucket = 1, M.BUCKETS do
 			vim.api.nvim_set_hl(0, M.highlight_group(bucket), { link = "GitBlameAge" })
-			vim.api.nvim_set_hl(0, M.legend_highlight_group(bucket), { link = "GitBlameAge" })
 		end
 		return
 	end
 
-	-- Transparent terminals have no background colour
-	local background = vim.api.nvim_get_hl(0, { name = "Normal", link = false }).bg
+	-- The stripe is drawn in the sign column, which takes the background of the window unless it has its own.
+	-- Transparent terminals have no background colour at all.
+	local background = vim.api.nvim_get_hl(0, { name = "SignColumn", link = false }).bg
+		or vim.api.nvim_get_hl(0, { name = "Normal", link = false }).bg
 		or (vim.o.background == "light" and 0xffffff or 0x000000)
-	-- `%#Group#` in 'winbar' does not inherit its background, and `%$Group$`, which does, needs Neovim 0.12
-	local winbar_background = vim.api.nvim_get_hl(0, { name = "WinBar", link = false }).bg
 	for bucket = 1, M.BUCKETS do
 		local ratio = OLDEST_MIX + (1 - OLDEST_MIX) * (bucket - 1) / (M.BUCKETS - 1)
-		local color = M.blend(background, accent, ratio)
-		vim.api.nvim_set_hl(0, M.highlight_group(bucket), { fg = color })
-		vim.api.nvim_set_hl(0, M.legend_highlight_group(bucket), { fg = color, bg = winbar_background })
+		vim.api.nvim_set_hl(0, M.highlight_group(bucket), { fg = M.blend(background, accent, ratio) })
 	end
 end
 

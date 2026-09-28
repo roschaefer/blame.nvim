@@ -6,7 +6,7 @@
 
 * **Git Blame Integration:** Displays the date (relative to today), author and commit subject next to each block of lines from the same commit, like GitHub's blame view.
 * **Commit Grouping:** A bar in the sign column of the file content window marks all lines of the commit under the cursor, to show which lines belong together.
-* **Commit Age:** A coloured stripe in the blame window shows the age of each commit relative to the other commits of the file, faint for older and strong for newer, like GitHub's blame view. A legend in the title of the blame window explains the colours, if there is room for it.
+* **Commit Age:** A coloured stripe in the blame window shows the age of each commit relative to the other commits of the file, faint for older and strong for newer, like GitHub's blame view. A legend in the title of the blame window explains the colours, if there is room for it (Neovim 0.12 or newer).
 * **Window Synchronization:** Keeps the blame window synchronized with the original file's cursor position and scroll view.
 * **Commit Message Panel:** Shows the full commit message of the cursor line on demand (`K`), to answer why a line is there.
 * **Commit History Navigation:** Stack-based navigation (`<CR>` to go forward, `<C-o>` to go backward) through revisions of a file.
@@ -80,7 +80,7 @@ vim.opt_local.cursorline = false
 
 Buffer-local keymaps defined there take precedence over the keymaps of `blame.nvim`.
 
-The age stripe is drawn in the sign column of the blame window. Its colours are blended from the background towards `GitBlameAge` (linked to `DiagnosticWarn`), so they follow your colour scheme; this needs `termguicolors`, otherwise all commits get the colour of `GitBlameAge`.
+The age stripe is drawn in the sign column of the blame window. Its colours are blended from the background of the sign column towards `GitBlameAge` (linked to `DiagnosticWarn`), so they follow your colour scheme; this needs `termguicolors`, otherwise all commits get the colour of `GitBlameAge`.
 
 The bar next to the lines of the commit under the cursor is drawn in the sign column of the file content window and highlighted with `GitBlameCursorCommit` (linked to `Special`).
 
