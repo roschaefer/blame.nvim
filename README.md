@@ -36,7 +36,7 @@ return {
 
 Navigate through the commit history:
 
-* Press `<CR>` (or `<C-]>`) on any line to view the blame prior to its commit: the view shows the blame of the file as it was in the parent of the commit that last changed this line. The title of the blame window shows the hash of that parent, not of the commit under the cursor.
+* Press `<CR>` (or `<C-]>`) on a committed line to view the blame prior to its commit, unless the commit is the first one in the history: the view shows the blame of the file as it was in the parent of the commit that last changed this line. The title of the blame window shows the hash of that parent, not of the commit under the cursor.
 * Press `<C-o>` (or `<C-t>`, `<BS>`) to go back to the version you came from.
 * Both work in the blame window and in the file content window, similar to following a tag with `<C-]>` and popping the tag stack with `<C-t>`.
 * In the blame window, `j` and `k` (or `<Down>` and `<Up>`) skip the empty lines and move from commit to commit, i.e. to the first line of the next or previous block. Inside a block, `k` first moves to the first line of that block. They take a count, e.g. `3j`. In the file content window they move line by line as usual.
