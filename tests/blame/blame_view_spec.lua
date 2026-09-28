@@ -1156,10 +1156,32 @@ describe("blame.blame_view", function()
 			assert.are.equal(7, move(7, 1))
 		end)
 
-		it("keeps the cursor column", function()
-			vim.api.nvim_win_set_cursor(blame_view.blame_winid, { 1, 1 })
-			blame_view:move_to_block(1)
-			assert.are.same({ 2, 1 }, vim.api.nvim_win_get_cursor(blame_view.blame_winid))
+		it("keeps the cursor column across shorter lines, like plain j and k", function()
+			local subjects = { "a long subject line for the first block", "short", "another long subject line" }
+			local output = {}
+			for i, subject in ipairs(subjects) do
+				table.insert(output, string.format("%d%s %d %d 1", i, string.rep("0", 39), i, i))
+				table.insert(output, "summary " .. subject)
+				table.insert(output, "filename file.lua")
+				table.insert(output, "\tline " .. i)
+			end
+			local view = BlameView:new({
+				git_instance = {
+					original_file = "/path/to/repo/file.lua",
+					git_root = "/path/to/repo",
+					get_blame_output = stub({}, "get_blame_output", table.concat(output, "\n")),
+				},
+			})
+			view:mount()
+			vim.api.nvim_win_set_cursor(view.blame_winid, { 1, 20 })
+
+			view:move_to_block(1)
+			assert.are.same({ 2, 6 }, vim.api.nvim_win_get_cursor(view.blame_winid))
+
+			view:move_to_block(1)
+			assert.are.same({ 3, 20 }, vim.api.nvim_win_get_cursor(view.blame_winid))
+
+			view:close()
 		end)
 	end)
 end)

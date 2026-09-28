@@ -352,7 +352,7 @@ end
 --- skipping the empty lines in between. It stops at the first and the last block.
 --- @param count number How many blocks to move, negative to move up
 function BlameView:move_to_block(count)
-	local row, col = unpack(vim.api.nvim_win_get_cursor(self.blame_winid))
+	local row = vim.api.nvim_win_get_cursor(self.blame_winid)[1]
 	local down = count > 0
 	local block_starts = {}
 	local previous_commit = ""
@@ -377,8 +377,11 @@ function BlameView:move_to_block(count)
 
 	local target = block_starts[math.max(1, math.min(current + count, #block_starts))]
 	-- Below the first line of the last block there is no next block, and moving down must not move up
-	if target and (not down or target > row) then
-		vim.api.nvim_win_set_cursor(self.blame_winid, { target, col })
+	if target and target ~= row and (not down or target > row) then
+		-- Moved with `j` and `k`, so the cursor keeps the column it had before a shorter line, like with plain `j`
+		vim.api.nvim_win_call(self.blame_winid, function()
+			vim.cmd("normal! " .. math.abs(target - row) .. (target > row and "j" or "k"))
+		end)
 	end
 end
 
