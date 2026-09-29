@@ -1,5 +1,18 @@
 # Changelog
 
+## [2.2.0](https://github.com/roschaefer/blame.nvim/compare/v2.1.0...v2.2.0) (2026-09-29)
+
+
+### Features
+
+* **view:** let users add their own keymaps to the view with on_attach ([#61](https://github.com/roschaefer/blame.nvim/issues/61)) ([8322829](https://github.com/roschaefer/blame.nvim/commit/8322829d5c050a80ba58a31e958015e72df8620d)), closes [#51](https://github.com/roschaefer/blame.nvim/issues/51)
+
+
+### Bug Fixes
+
+* **view:** keep the cursor in its row of the window when navigating ([#66](https://github.com/roschaefer/blame.nvim/issues/66)) ([48bfcaa](https://github.com/roschaefer/blame.nvim/commit/48bfcaa26a114b2376ef71478236b70101c0bb25))
+* **view:** keep the cursor on its line when blaming prior to a commit ([#64](https://github.com/roschaefer/blame.nvim/issues/64)) ([6b4346d](https://github.com/roschaefer/blame.nvim/commit/6b4346d77827d5c111db40fb339994806fbceb3e))
+
 ## [2.1.0](https://github.com/roschaefer/blame.nvim/compare/v2.0.0...v2.1.0) (2026-09-28)
 
 
