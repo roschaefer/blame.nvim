@@ -828,6 +828,38 @@ describe("blame.blame_view", function()
 		blame_view:close()
 	end)
 
+	it("keeps the cursor in the same row of the window when navigating forward and back", function()
+		local mock_git = {
+			original_file = "/path/to/repo/file.lua",
+			git_root = "/path/to/repo",
+			get_blame_output = stub({}, "get_blame_output", blame_output_with_lines(50)),
+			get_prior_line = stub({}, "get_prior_line", 37),
+		}
+		local blame_view = BlameView:new({ git_instance = mock_git })
+		blame_view:mount()
+		blame_view.blame_lines[24].previous = { commit = "prev_hash", filename = "file.lua" }
+		vim.api.nvim_set_current_win(blame_view.file_winid)
+		vim.fn.winrestview({ topline = 20, lnum = 24 })
+		vim.cmd("syncbind")
+		assert.are.equal(5, vim.fn.winline())
+
+		blame_view:navigate_forward()
+
+		assert.are.same({ 37, 0 }, vim.api.nvim_win_get_cursor(blame_view.file_winid))
+		for _, winid in ipairs({ blame_view.blame_winid, blame_view.file_winid }) do
+			assert.are.equal(33, vim.fn.getwininfo(winid)[1].topline)
+		end
+
+		blame_view:navigate_backward()
+
+		assert.are.same({ 24, 0 }, vim.api.nvim_win_get_cursor(blame_view.file_winid))
+		for _, winid in ipairs({ blame_view.blame_winid, blame_view.file_winid }) do
+			assert.are.equal(20, vim.fn.getwininfo(winid)[1].topline)
+		end
+
+		blame_view:close()
+	end)
+
 	it("falls back to the source line if the prior line cannot be found", function()
 		local mock_git = {
 			original_file = "/path/to/repo/file.lua",

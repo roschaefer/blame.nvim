@@ -3,6 +3,7 @@
 ---@class BreadcrumbItem
 ---@field commit_info Porcelain|nil
 ---@field cursor_pos number[]|nil
+---@field window_row number|nil The row of the window the cursor was in, to scroll back to it
 
 ---@class Breadcrumb
 ---@field stack BreadcrumbItem[]

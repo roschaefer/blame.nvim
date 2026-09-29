@@ -451,9 +451,19 @@ end
 
 --- Moves the cursor in both windows to the same position and re-aligns their scroll views.
 --- @param cursor_pos table {row, col}
-function BlameView:set_cursor(cursor_pos)
+--- @param window_row number|nil The row of the window to scroll the cursor line to, as returned by `winline()`
+function BlameView:set_cursor(cursor_pos, window_row)
 	for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
 		utils.set_cursor_to_line(winid, cursor_pos[1], cursor_pos[2])
+	end
+	if window_row then
+		-- Every buffer line takes exactly one row of the window, see `enforce_view_options()`
+		local topline = math.max(1, vim.api.nvim_win_get_cursor(self.file_winid)[1] - window_row + 1)
+		for _, winid in ipairs({ self.blame_winid, self.file_winid }) do
+			vim.api.nvim_win_call(winid, function()
+				vim.fn.winrestview({ topline = topline })
+			end)
+		end
 	end
 	vim.api.nvim_win_call(self.file_winid, function()
 		vim.cmd("syncbind")
@@ -473,8 +483,10 @@ function BlameView:navigate_forward()
 	end
 
 	local current = self.breadcrumb:current()
+	local window_row = vim.fn.winline()
 	if current then
 		current.cursor_pos = vim.api.nvim_win_get_cursor(0)
+		current.window_row = window_row
 	end
 
 	if self.breadcrumb:push({ commit_info = commit_info, cursor_pos = nil }) then
@@ -484,7 +496,7 @@ function BlameView:navigate_forward()
 		end
 		-- The source line is the line in the commit, which may be another one in the version prior to it
 		local line = self.git_instance:get_prior_line(commit_info) or commit_info.header.source_line
-		self:set_cursor({ line, 0 })
+		self:set_cursor({ line, 0 }, window_row)
 		self:follow_cursor()
 	end
 end
@@ -502,7 +514,7 @@ function BlameView:navigate_backward()
 	end
 
 	if current.cursor_pos then
-		self:set_cursor(current.cursor_pos)
+		self:set_cursor(current.cursor_pos, current.window_row)
 	end
 	self:follow_cursor()
 end
