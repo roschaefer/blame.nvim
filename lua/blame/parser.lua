@@ -29,6 +29,37 @@ local M = {}
 ---@field filename string
 ---@field line_content string
 
+local ESCAPES = { a = "\a", b = "\b", t = "\t", n = "\n", v = "\v", f = "\f", r = "\r" }
+
+--- Decodes a path that git quoted because of special characters, e.g. `"caf\303\251.txt"` for `café.txt`.
+--- @param path string
+--- @return string
+local function unquote_path(path)
+	if not path:match('^".*"$') then
+		return path
+	end
+	local decoded = {}
+	local i = 2
+	while i < #path do
+		local char = path:sub(i, i)
+		if char == "\\" then
+			local octal = path:match("^[0-7][0-7][0-7]", i + 1)
+			if octal then
+				table.insert(decoded, string.char(tonumber(octal, 8)))
+				i = i + 4
+			else
+				local escaped = path:sub(i + 1, i + 1)
+				table.insert(decoded, ESCAPES[escaped] or escaped)
+				i = i + 2
+			end
+		else
+			table.insert(decoded, char)
+			i = i + 1
+		end
+	end
+	return table.concat(decoded)
+end
+
 --- Parses the git blame --line-porcelain output.
 --- @param blame_result_stdout string The stdout of the git blame command.
 --- @return table A table with a 'lines' field containing a list of Porcelain objects.
@@ -86,11 +117,11 @@ function M.parse_blame_output(blame_result_stdout)
 				if prev_commit and prev_filename then
 					current_porcelain.previous = {
 						commit = prev_commit,
-						filename = prev_filename,
+						filename = unquote_path(prev_filename),
 					}
 				end
 			elseif line:sub(1, 9) == "filename " then
-				current_porcelain.filename = line:sub(10)
+				current_porcelain.filename = unquote_path(line:sub(10))
 			end
 		end
 	end
