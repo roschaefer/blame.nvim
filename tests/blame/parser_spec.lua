@@ -260,4 +260,17 @@ filename file.txt
 		local actual = blame.parse_blame_output(blame_result_stdout)
 		assert.are.same(expected, actual)
 	end)
+	it("decodes the file names that git quotes because of special characters", function()
+		local blame_result_stdout = [[
+061d471a00000000000000000000000000000000 1 1 1
+previous 4a8e23b100000000000000000000000000000000 "old \"caf\303\251\".txt"
+filename "tab\tand\\backslash\\101.txt"
+	Line 1 content
+]]
+
+		local line = blame.parse_blame_output(blame_result_stdout).lines[1]
+
+		assert.are.equal('old "café".txt', line.previous.filename)
+		assert.are.equal("tab\tand\\backslash\\101.txt", line.filename)
+	end)
 end)

@@ -96,6 +96,10 @@ function Git:get_prior_line(commit_info)
 		"git",
 		"diff",
 		"--unified=0",
+		-- `diff.interHunkContext` would merge nearby hunks, which `diff.old_line` reads as changed lines
+		"--inter-hunk-context=0",
+		-- Files marked as binary, e.g. with `-diff` in `.gitattributes`, would have no hunks
+		"--text",
 		"--no-color",
 		"--no-ext-diff",
 		"--no-textconv",

@@ -108,6 +108,51 @@ describe("blame.git", function()
 			assert.are.equal(4, git:get_prior_line(changed_line))
 		end)
 
+		--- Blames `new.txt` after committing it with other lines.
+		local function blame_after_commit(lines)
+			vim.fn.writefile(lines, repo .. "/new.txt")
+			git_in_repo({ "commit", "--quiet", "--all", "-m", "Change the file again" })
+			local buf_id = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_id, repo .. "/new.txt")
+			local git = assert(Git:new(buf_id))
+			vim.api.nvim_buf_delete(buf_id, { force = true })
+			return git, parser.parse_blame_output(assert(git:get_blame_output(nil))).lines
+		end
+
+		it("keeps nearby hunks apart, even if the user config merges them", function()
+			git_in_repo({ "config", "diff.interHunkContext", "3" })
+
+			local git, blame_lines =
+				blame_after_commit({ "zero", "half", "one", "X", "two", "Y", "three", "FOUR", "five" })
+
+			assert.are.equal("Y", blame_lines[6].line_content)
+			assert.are.equal(5, git:get_prior_line(blame_lines[6]))
+		end)
+
+		it("compares files as text, even if they are marked as binary", function()
+			vim.fn.writefile({ "* -diff" }, repo .. "/.git/info/attributes")
+
+			local git, blame_lines = blame_after_commit({ "one", "two", "X", "FOUR", "five" })
+
+			assert.are.equal("X", blame_lines[3].line_content)
+			assert.are.equal(5, git:get_prior_line(blame_lines[3]))
+		end)
+
+		it("finds the line in a file renamed to a name that git quotes", function()
+			git_in_repo({ "mv", "new.txt", 'café "q".txt' })
+			vim.fn.writefile({ "zero", "half", "one", "X", "two", "three", "FOUR", "five" }, repo .. '/café "q".txt')
+			git_in_repo({ "commit", "--quiet", "--all", "-m", "Rename the file" })
+			local buf_id = vim.api.nvim_create_buf(false, true)
+			vim.api.nvim_buf_set_name(buf_id, repo .. '/café "q".txt')
+			local git = assert(Git:new(buf_id))
+			vim.api.nvim_buf_delete(buf_id, { force = true })
+			local blame_lines = parser.parse_blame_output(assert(git:get_blame_output(nil))).lines
+
+			assert.are.equal("X", blame_lines[4].line_content)
+			assert.are.equal('café "q".txt', blame_lines[4].filename)
+			assert.are.equal(4, git:get_prior_line(blame_lines[4]))
+		end)
+
 		it("returns nil if there is no version prior to the commit", function()
 			local buf_id = vim.api.nvim_create_buf(false, true)
 			vim.api.nvim_buf_set_name(buf_id, repo .. "/new.txt")
