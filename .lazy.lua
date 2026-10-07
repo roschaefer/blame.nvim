@@ -36,14 +36,10 @@ return {
 					vim.fn.setreg(vim.v.register, commit.hash)
 					vim.notify("Yanked " .. commit.hash .. " " .. (commit.summary or ""))
 				end, { desc = "Yank the commit of the cursor line" })
-				view.keymap.set("n", "gd", function()
-					local commit = view:commit()
-					if not commit then
-						vim.notify("Not committed yet")
-						return
-					end
+				view.keymap.set("n", "<leader>gr", function()
+					local revision = view:revision() or "HEAD"
 					local result = vim.system(
-						{ "git", "-C", view.git_root, "show", "--no-color", commit.hash },
+						{ "git", "-C", view.git_root, "show", "--no-color", revision },
 						{ text = true }
 					)
 						:wait()
@@ -53,7 +49,7 @@ return {
 					vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(result.stdout, "\n"))
 					vim.bo.modifiable = false
 					vim.bo.filetype = "git"
-				end, { desc = "Show the commit of the cursor line" })
+				end, { desc = "Show the revision displayed in the view" })
 			end,
 		},
 		cmd = "Blame",
