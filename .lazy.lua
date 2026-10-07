@@ -36,8 +36,7 @@ return {
 					vim.fn.setreg(vim.v.register, commit.hash)
 					vim.notify("Yanked " .. commit.hash .. " " .. (commit.summary or ""))
 				end, { desc = "Yank the commit of the cursor line" })
-				view.keymap.set("n", "gd", function()
-					-- The working tree has no commit, so show the last one
+				view.keymap.set("n", "<leader>gr", function()
 					local revision = view:revision() or "HEAD"
 					local result = vim.system(
 						{ "git", "-C", view.git_root, "show", "--no-color", revision },
@@ -50,7 +49,7 @@ return {
 					vim.api.nvim_buf_set_lines(0, 0, -1, false, vim.split(result.stdout, "\n"))
 					vim.bo.modifiable = false
 					vim.bo.filetype = "git"
-				end, { desc = "Show the diff of the shown version" })
+				end, { desc = "Show the revision displayed in the view" })
 			end,
 		},
 		cmd = "Blame",

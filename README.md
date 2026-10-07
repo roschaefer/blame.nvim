@@ -90,14 +90,14 @@ return {
           end
         end, { desc = "Yank commit hash" })
 
-        -- Show the commit of the version of the file that is shown, with your git plugin.
-        -- The working tree has no commit, so show the last one.
-        view.keymap.set("n", "gd", function()
+        -- Show the revision displayed in the view with your git plugin.
+        -- The working tree has no revision, so show HEAD instead.
+        view.keymap.set("n", "<leader>gr", function()
           local revision = view:revision() or "HEAD"
           -- vim.cmd("Gitsigns show_commit " .. revision) -- gitsigns.nvim
           -- vim.cmd("DiffviewOpen " .. revision .. "^!") -- diffview.nvim
           -- vim.cmd("Git show " .. revision) -- vim-fugitive
-        end, { desc = "Show commit" })
+        end, { desc = "Show the revision displayed in the view" })
       end,
     },
     cmd = "Blame",
@@ -169,7 +169,7 @@ lazy.nvim merges into your configuration whenever Neovim starts inside this
 repository. The first time, Neovim asks you to trust `.lazy.lua`: choose
 `(v)iew` and run `:trust`.
 
-The project-local spec also adds the keymaps from [Custom keymaps](#custom-keymaps) as a demo of `on_attach`: `yc` yanks the commit of the cursor line, `gd` shows the commit of the shown version, or `HEAD` for the working tree.
+The project-local spec also adds the keymaps from [Custom keymaps](#custom-keymaps) as a demo of `on_attach`: `yc` yanks the commit of the cursor line and `<leader>gr` shows the revision displayed in the view.
 
 To run the unit tests:
 
@@ -190,3 +190,7 @@ To format the code, or to check the formatting the same way CI does:
 stylua lua
 stylua --check lua
 ```
+
+## License
+
+[MIT](LICENSE)
