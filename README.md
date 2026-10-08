@@ -2,6 +2,8 @@
 
 `blame.nvim` is a Neovim plugin to interactively explore the `git blame` of the current file similar to Github's [blame button](https://docs.github.com/en/repositories/working-with-files/using-files/viewing-and-understanding-files#viewing-the-line-by-line-revision-history-for-a-file).
 
+[![blame.nvim demo](assets/demo.gif)](https://asciinema.org/a/1267745)
+
 ## Features
 
 * **Git Blame Integration:** Displays the date (relative to today), author and commit subject next to each block of lines from the same commit, like GitHub's blame view.
